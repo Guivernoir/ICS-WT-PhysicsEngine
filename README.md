@@ -54,7 +54,7 @@ The simulator exposes several critical process variables and configuration const
 1. **Ensure Python 3.14.2+ is installed.**
 2. **Clone the repository**:
 ```bash
-git clone https://github.com/your-username/water-treatment-sim.git
+git clone https://github.com/Guivernoir/water-treatment-sim.git
 cd water-treatment-sim
 
 ```
