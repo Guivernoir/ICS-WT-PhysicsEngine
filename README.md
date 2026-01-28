@@ -93,15 +93,14 @@ python -m pymodbus.console tcp --host 127.0.0.1 --port 5020
 
 The simulation follows a modular approach:
 
-1. **`reactor.py`**: Handles the spatial distribution and mass transport between zones.
-2. **`chemistry.py`**: Solves the non-linear equations for chemical species and pH.
-3. **`ph_sensor.py`**: Adds the "Real-World" layer of noise and instrument limitations.
-4. **`slave.py`**: Bridges the physics objects to the Modbus data blocks.
+1. **`core.py`**: Phisics calculus intended for maximum realism.
+2. **`ph_sensor.py`**: Adds the "Real-World" layer of noise and instrument limitations.
+3. **`slave.py`**: Bridges the physics objects to the Modbus data blocks.
 
 ---
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ---
