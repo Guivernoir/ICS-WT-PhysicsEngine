@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "water-treatment-sim"
+version = "0.1.0"
+description = "Industrial CSTR Physics Simulator with Modbus TCP Integration"
+readme = "README.md"
+requires-python = ">=3.14"
+authors = [
+    { name = "Guilherme F. G. Santos" }
+]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: System :: Monitoring",
+]
+
+dependencies = [
+    "numpy>=2.1.0",
+    "scipy>=1.14.0",
+    "pymodbus>=3.11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+wts-sim = "main:main"
+
+[tool.setuptools]
+packages = ["."]

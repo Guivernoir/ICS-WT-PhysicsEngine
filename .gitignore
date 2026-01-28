@@ -1,0 +1,6 @@
+venv/
+sensors/__pycache__/
+core/__pycache__/
+modbus/__pycache__/
+__pycache__/
+.ruff_cache
