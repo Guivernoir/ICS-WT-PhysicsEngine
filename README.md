@@ -1,78 +1,95 @@
-# Water Treatment Reactor Simulation Platform
+# Water Treatment Simulator - Physics & Instrumentation Module
 
-**Version:** 1.0.0 (MVP)  
-**Status:** Production-Ready Physics Engine  
+**Version:** 1.0.0  
+**Status:** Production-Ready  
+**Module Type:** Plant Simulation Subsystem  
 **Author:** Guilherme F. G. Santos  
 **License:** MIT  
 **Date:** January 2026
 
 ---
 
-## Executive Summary
+## Module Overview
 
-This is a **hardened, physics simulation** of a water treatment CSTR (Continuous Stirred-Tank Reactor) with realistic sensor models and Modbus/TCP industrial protocol integration. 
+This module provides **complete plant-side simulation** for a water treatment CSTR (Continuous Stirred-Tank Reactor). It simulates everything a real water treatment system does: chemistry, physics, sensors, and industrial communication protocols.
 
-**What this MVP delivers:**
+**Purpose:** Provide a high-fidelity plant model for control system development, operator training, and system integration testing.
+
+**Scope of This Module:**
 - Rigorous chemical kinetics and transport phenomena (validated against literature)
 - Industrial-grade sensor simulation (noise, drift, fouling, faults)
-- Modbus/TCP server for SCADA/PLC/HMI integration
-- Zero control logic (by design)
+- Modbus/TCP server for external control system integration
+- Zero control logic (this is the plant, not the controller)
 
-**What's coming next:**
-- Control module (PID, MPC, feedforward)
-- Actuator dynamics (valves, pumps, dosing systems)
-- Advanced fault injection framework
-- Historical data logging and trending
+**What This Module Does NOT Include:**
+- Control algorithms (PID, MPC, etc.) - that's a separate module
+- Actuator command generation - that's the control layer's job
+- HMI/SCADA screens - that's the visualization layer
+- Historical data logging - that's the infrastructure layer
 
-This is the **foundation layer**. Control systems will be built on top, not baked in.
+This is the **process simulator**. It responds to control commands and returns sensor readings, exactly like a real plant.
 
 ---
 
-## Architecture Philosophy
+## System Architecture
 
-### Separation of Concerns (The Right Way)
+### This Module's Role in the Larger System
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  CONTROL LAYER (Phase 2 - Not Yet Implemented)         │
-│  - PID controllers                                      │
-│  - Model Predictive Control (MPC)                       │
-│  - Feedforward compensation                             │
-│  - Setpoint management                                  │
-│  - Alarm logic                                          │
-└────────────────┬────────────────────────────────────────┘
-                 │ Commands (flow rates, dosing)
-                 ▼
-┌─────────────────────────────────────────────────────────┐
-│  INTERFACE LAYER (Modbus/TCP - Implemented)            │
-│  - Protocol adapter only                                │
-│  - Register mapping                                     │
-│  - Data encoding/decoding                               │
-│  - No validation, no logic                              │
-└────────────────┬────────────────────────────────────────┘
-                 │ Physical boundary conditions
-                 ▼
-┌─────────────────────────────────────────────────────────┐
-│  SENSOR LAYER (Implemented with High Fidelity)         │
-│  - Noise, drift, fouling, faults                        │
-│  - Sample line transport delays (10-60s)                │
-│  - Calibration expiration                               │
-│  - Installation quality effects                         │
-└────────────────┬────────────────────────────────────────┘
-                 │ True state → measured state
-                 ▼
-┌─────────────────────────────────────────────────────────┐
-│  PHYSICS ENGINE (Core - Implemented & Validated)       │
-│  - Multi-zone CSTR with stratification                  │
-│  - Temperature-dependent kinetics (Arrhenius)           │
-│  - pH buffering (carbonate system)                      │
-│  - Chlorine decay (HOCl/OCl⁻ speciation)                │
-│  - Turbulent mixing and transport                       │
-│  - Conservation laws (mass, energy, charge)             │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    OVERALL SYSTEM                            │
+│                                                              │
+│  ┌─────────────────────────────────────────────────┐         │
+│  │  OPERATOR INTERFACE (Separate Module)           │         │
+│  │  - HMI screens                                  │         │
+│  │  - Trending and alarms                          │         │
+│  │  - Historical data visualization                │         │
+│  └────────────┬────────────────────────────────────┘         │
+│               │                                              │
+│  ┌────────────▼────────────────────────────────────┐         │
+│  │  CONTROL LAYER (Separate Module)                │         │
+│  │  - PID/MPC controllers                          │         │
+│  │  - Setpoint management                          │         │
+│  │  - Alarm logic and interlocks                   │         │
+│  └────────────┬────────────────────────────────────┘         │
+│               │ Commands (dosing rates, flows)               │
+│               │                                              │
+│  ╔════════════▼════════════════════════════════════╗         │
+│  ║  THIS MODULE: PLANT SIMULATION                  ║         │
+│  ║                                                 ║         │
+│  ║  ┌────────────────────────────────────────────┐ ║         │
+│  ║  │  Modbus/TCP Interface                      │ ║         │
+│  ║  │  - Register mapping                        │ ║         │
+│  ║  │  - Protocol handling                       │ ║         │
+│  ║  └───────────┬────────────────────────────────┘ ║         │
+│  ║              │                                  ║         │
+│  ║  ┌───────────▼────────────────────────────────┐ ║         │
+│  ║  │  Sensor Suite (High Fidelity)              │ ║         │
+│  ║  │  - Noise, drift, fouling, faults           │ ║         │
+│  ║  │  - Sample line delays                      │ ║         │
+│  ║  │  - Calibration dynamics                    │ ║         │
+│  ║  └───────────┬────────────────────────────────┘ ║         │
+│  ║              │                                  ║         │
+│  ║  ┌───────────▼───────────────────────────────┐  ║         │
+│  ║  │  Physics Engine (Validated)               │  ║         │
+│  ║  │  - Multi-zone CSTR                        │  ║         │
+│  ║  │  - Chemical kinetics                      │  ║         │
+│  ║  │  - Transport phenomena                    │  ║         │
+│  ║  │  - Conservation laws                      │  ║         │
+│  ║  └───────────────────────────────────────────┘  ║         │
+│  ╚═════════════════════════════════════════════════╝         │
+│                                                              │
+│  ┌─────────────────────────────────────────────────┐         │
+│  │  DATA INFRASTRUCTURE (Separate Module)          │         │
+│  │  - Time-series database                         │         │
+│  │  - Historical logging                           │         │
+│  │  - Backup and recovery                          │         │
+│  └─────────────────────────────────────────────────┘         │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-**Key Design Decision:** The physics engine accepts **physical boundary conditions** (actual flows entering the tank), not control commands. This mirrors reality: the physics doesn't care about your setpoint; it responds to what's actually flowing.
+**Key Design Principle:** This module simulates the **physical plant only**. It accepts commands via Modbus (like a real plant accepts valve positions) and returns sensor readings (like a real plant's field instruments). All intelligence lives elsewhere.
 
 ---
 
@@ -138,7 +155,7 @@ This is the **foundation layer**. Control systems will be built on top, not bake
 
 ---
 
-## Installation & Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -147,20 +164,6 @@ python >= 3.10
 numpy >= 1.24
 scipy >= 1.11
 pymodbus >= 3.11
-```
-
-### Installation
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/wt-simulator.git
-cd wt-simulator
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Validate physics engine (CRITICAL - run this first)
-python -m wt_simulator.core
 ```
 
 **Expected output:**
@@ -414,20 +417,6 @@ All Modbus register operations are thread-safe:
 
 **Why this matters:** Real SCADA systems hammer Modbus servers with concurrent requests. This simulator won't deadlock or corrupt state.
 
-### Performance Characteristics
-
-**Typical latencies (measured on Intel i7-10700K):**
-- Modbus read (single register): <0.5 ms
-- Modbus write (single register): <0.8 ms
-- Physics step (5 zones, 1s timestep): 2-4 ms
-- Sensor read (all sensors): 0.5-1 ms
-
-**Maximum sustainable rate:**
-- Modbus queries: ~1000/second (limited by network RTT)
-- Physics steps: ~250 Hz (4 ms per step)
-
-**Bottleneck:** Physics integration, not Modbus. For real-time requirements (<10 ms), reduce zones or increase timestep.
-
 ---
 
 ## Development Roadmap
@@ -521,55 +510,6 @@ If you add/modify sensor models:
 2. Show typical fault modes (not just ideal operation)
 3. Include installation effects (flow, vibration, temperature)
 4. Demonstrate sample line delays if applicable
-
----
-
-## Testing Strategy
-
-### Unit Tests (Physics)
-
-```bash
-# Test individual modules
-python -m wt_simulator.core.thermodynamics
-python -m wt_simulator.core.chemistry
-python -m wt_simulator.core.transport
-python -m wt_simulator.core.spatial
-python -m wt_simulator.core.reactor
-```
-
-Each module has embedded `validate_*()` functions that run automatically.
-
-### Integration Tests (Sensors)
-
-```bash
-# Test sensor suite
-python -m wt_simulator.sensors.ph_sensor
-python -m wt_simulator.sensors.chlorine_sensor
-python -m wt_simulator.sensors.flow_sensor
-python -m wt_simulator.sensors.temperature_sensor
-```
-
-### System Tests (Full Simulation)
-
-```bash
-# Run 5-minute simulation and check output
-python -m wt_simulator --no-modbus --duration 300 --verbose > test_output.log
-grep "ERROR" test_output.log  # Should be empty
-grep "CRITICAL" test_output.log  # Should be empty
-```
-
-### Modbus Protocol Tests
-
-```bash
-# Test Modbus encoding/decoding
-python -m wt_simulator.modbus.protocols
-
-# Test register map consistency
-python -m wt_simulator.modbus.register_map
-
-# Test Modbus server (requires manual client testing)
-python -m wt_simulator.modbus.slave
-```
 
 ---
 
