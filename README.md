@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This is a **hardened, production-grade physics simulation** of a water treatment CSTR (Continuous Stirred-Tank Reactor) with realistic sensor models and Modbus/TCP industrial protocol integration. 
+This is a **hardened, physics simulation** of a water treatment CSTR (Continuous Stirred-Tank Reactor) with realistic sensor models and Modbus/TCP industrial protocol integration. 
 
 **What this MVP delivers:**
 - Rigorous chemical kinetics and transport phenomena (validated against literature)
