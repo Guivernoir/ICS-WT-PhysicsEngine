@@ -17,17 +17,30 @@ if str(SRC) not in sys.path:
 
 MAX_FILES_PER_FOLDER = 20
 MAX_LINES = 500
-CODE_FILE_SUFFIXES = {".py", ".pyi"}
+CODE_FILE_SUFFIXES = {
+    ".css",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".py",
+    ".pyi",
+    ".svelte",
+    ".ts",
+    ".tsx",
+}
 SKIP_DIRS = {
     ".git",
     ".private",
     ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
+    ".svelte-kit",
     ".venv",
     "__pycache__",
     "build",
+    "coverage",
     "dist",
+    "node_modules",
     "venv",
 }
 LOCAL_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")

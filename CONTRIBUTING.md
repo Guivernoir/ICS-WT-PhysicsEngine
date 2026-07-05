@@ -18,6 +18,13 @@ Run the simulator without Modbus:
 python -m hydrasim --no-modbus --duration 10 --dt 1
 ```
 
+Install the HMI toolchain:
+
+```bash
+cd hmi
+npm ci
+```
+
 ## Quality Gate
 
 Run the full gate before proposing changes:
@@ -29,15 +36,27 @@ python -m ruff check src tools tests
 python -m mypy src/hydrasim
 python -m compileall -q src tests tools
 python tools/check_project_quality.py
-python -m unittest discover -s tests -v
+python -m coverage run -m unittest discover -s tests -v
+python -m coverage report
+python -m coverage xml
+cd hmi
+npm audit
+npm run lint
+npm run check
+npm run test
+npm run build
 ```
 
-The project quality checker enforces a hard 500-line limit for every Python code
-file. Split modules before crossing that limit.
+The project quality checker enforces a hard 500-line limit for Python, Svelte,
+TypeScript, JavaScript, and CSS code files. Coverage reporting enforces the
+configured project floor in `pyproject.toml`. Split modules or components before
+crossing the line limit, and add tests before reducing coverage.
 
 ## Code Standards
 
 - Keep public package names under `hydrasim` and command names under `hs-*`.
+- Keep HMI code under `hmi` and use HydraSim, HS, or `hydrasim` naming.
+- Keep browser code behind the HMI API boundary; do not add browser-side Modbus.
 - Prefer small modules with explicit boundaries over large legacy catch-all
   files.
 - Keep tests close to the behavior being changed.
@@ -60,6 +79,18 @@ production captures, or operational guidance for systems you do not own.
 - The full local quality gate passes.
 - Public README commands still match the implemented CLI.
 - New or changed files use HydraSim, HS, or `hydrasim` naming.
+- HMI changes pass `npm audit`, `npm run lint`, `npm run check`,
+  `npm run test`, and `npm run build`.
 - Security-sensitive reports follow [SECURITY.md](SECURITY.md).
 - The changelog is updated for user-visible behavior, metadata, CI, or policy
   changes.
+
+## Release Checklist
+
+- The quality workflow is green on `main`.
+- `CHANGELOG.md` has a release entry for the version.
+- `pyproject.toml` contains the intended version.
+- A signed or otherwise intentional tag named `vX.Y.Z` is pushed.
+- The release workflow builds and checks the distribution artifacts.
+- PyPI publishing is triggered only after the `pypi` trusted publisher
+  environment is configured and the manual workflow input is enabled on a tag.

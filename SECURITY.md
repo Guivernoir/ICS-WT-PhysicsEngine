@@ -5,12 +5,16 @@
 HydraSim is a simulation and test harness. It is not certified design authority,
 commissioning evidence, safety validation, or real-plant validation.
 
-Security reports should relate to the HydraSim codebase, package metadata,
-generated artifacts, local simulator behavior, or CI/release process.
+Security reports should relate to the HydraSim codebase, HMI frontend, package
+metadata, generated artifacts, local simulator behavior, or CI/release process.
 
 Do not use HydraSim to test systems you do not own or administer. Do not submit
 third-party plant details, credentials, production packet captures, or exploit
 steps against real infrastructure.
+
+The SvelteKit HMI is a simulation-only operator interface. It must not connect
+directly to Modbus endpoints from the browser, embed credentials, or present
+synthetic telemetry as production plant state.
 
 ## Supported Versions
 

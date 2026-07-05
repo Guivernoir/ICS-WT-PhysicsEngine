@@ -1,13 +1,15 @@
 # HydraSim
 
 [![Quality](https://github.com/Guivernoir/HydraSim/actions/workflows/quality.yml/badge.svg)](https://github.com/Guivernoir/HydraSim/actions/workflows/quality.yml)
+[![Release](https://github.com/Guivernoir/HydraSim/actions/workflows/release.yml/badge.svg)](https://github.com/Guivernoir/HydraSim/actions/workflows/release.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)
+![Node](https://img.shields.io/badge/node-24-green)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Code files](https://img.shields.io/badge/code%20files-%3C%3D500%20lines-brightgreen)
 
-HydraSim is a Python water-treatment process simulator for control-system
-integration, Modbus testing, synthetic plant traffic, and bounded CFD/digital
-twin experiments.
+HydraSim is a Python water-treatment process simulator with a SvelteKit HMI for
+control-system integration, Modbus testing, synthetic plant traffic, and bounded
+CFD/digital-twin experiments.
 
 It gives you a local process endpoint that behaves like a small field-facing
 water plant unit: reactor physics evolve over time, actuators change process
@@ -27,10 +29,10 @@ security policy, and this README. Internal planning notes stay in ignored
 `.private/docs` files and are not part of the public repository.
 
 The package targets Python 3.11 and newer, with CI coverage for Python 3.11,
-3.12, 3.13, and 3.14. CI is also the repository quality contract: formatting,
-lint, types, dependency checks, syntax compilation, deterministic project
-checks, the 500-line code-file limit, and the full unit/Modbus test suite must
-all pass.
+3.12, 3.13, and 3.14. The HMI targets Node 24 and current SvelteKit tooling. CI
+is also the repository quality contract: formatting, lint, types, dependency
+checks, syntax compilation, deterministic project checks, the 500-line code-file
+limit, and the full Python/HMI test suites must all pass.
 
 ## Why HydraSim
 
@@ -52,6 +54,8 @@ what is synthetic versus externally validated.
   bundles for repeatable local testing.
 - Provides staged Reference Water Plant profiles for offline export, selected
   area runs, and live-plan generation.
+- Ships a SvelteKit HMI dashboard for simulation-only process visibility,
+  scenario selection, trends, alarms, and bounded operator setpoint experiments.
 - Includes bounded CFD/digital-twin primitives and evidence gates that separate
   implementation verification from real-plant validation.
 - Enforces repository quality with formatting, lint, type checks, tests,
@@ -87,7 +91,28 @@ python -m ruff check src tools tests
 python -m mypy src/hydrasim
 python -m compileall -q src tests tools
 python tools/check_project_quality.py
-python -m unittest discover -s tests -v
+python -m coverage run -m unittest discover -s tests -v
+python -m coverage report
+python -m coverage xml
+```
+
+Run the HMI locally:
+
+```bash
+cd hmi
+npm ci
+npm run dev
+```
+
+Run the HMI quality gate:
+
+```bash
+cd hmi
+npm audit
+npm run lint
+npm run check
+npm run test
+npm run build
 ```
 
 ## Common Commands
@@ -187,11 +212,14 @@ The main packages are:
 - `src/hydrasim/scenarios`: deterministic Modbus scenario library and runner.
 - `src/hydrasim/plant`: staged Reference Water Plant profiles, artifacts, and CLI.
 - `src/hydrasim/hydraulics`: bounded CFD/digital-twin primitives.
+- `hmi`: SvelteKit simulation HMI with static-build output and no direct
+  browser-side Modbus control.
 
 ## Quality Standard
 
 HydraSim CI installs `.[dev,modbus]` and enforces the same gate intended for
-local development:
+local development. HMI CI installs from `hmi/package-lock.json` and enforces the
+frontend gate separately.
 
 - Black formatting on `src`, `tests`, and `tools`.
 - Ruff linting on `src`, `tests`, and `tools`.
@@ -200,11 +228,15 @@ local development:
 - Syntax compilation checks through `compileall`.
 - Project quality policy checks, including public README coverage, deterministic
   artifact checks, Modbus dependency checks, folder density, and the hard
-  500-line limit for every Python code file.
-- Full unit and live Modbus end-to-end test discovery.
+  500-line limit for Python, Svelte, TypeScript, JavaScript, and CSS code files.
+- Coverage-enforced unit and live Modbus end-to-end test discovery, with
+  per-Python-version XML artifacts uploaded by CI.
+- HMI dependency audit, ESLint, Prettier, Svelte type checking, Vitest unit
+  tests, and production SvelteKit build.
 
 The quality gate has no oversized-module allowlist. If a Python file grows past
-500 lines, CI fails and the code should be split before merging.
+500 lines, or an HMI code file grows past 500 lines, CI fails and the code
+should be split before merging.
 
 ## Contributing And Releases
 
@@ -214,6 +246,11 @@ quality expectations, and public/private documentation rules.
 See [CHANGELOG.md](CHANGELOG.md) for release notes. HydraSim uses semantic
 versioning intent: patch releases for fixes, minor releases for compatible
 features, and major releases for breaking public API or command changes.
+
+Release tags matching `v*` build and validate wheel/source distributions.
+Publishing to PyPI is available through the release workflow only when manually
+dispatched on a release tag with the `publish-pypi` input enabled and the `pypi`
+trusted-publishing environment configured.
 
 ## License
 

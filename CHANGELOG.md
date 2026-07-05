@@ -19,6 +19,14 @@ HydraSim follows semantic versioning intent:
   lines.
 - Strict Mypy checking of untyped function bodies.
 - Dependabot coverage for GitHub Actions and Python packaging metadata.
+- Coverage-enforced unit test execution with XML artifacts in CI.
+- Release workflow that builds and validates wheel/source distributions on
+  `v*` tags.
+- Guarded PyPI trusted-publishing job for manual release dispatches on tags.
+- SvelteKit HMI scaffold with simulation dashboard, alarms, trends, scenarios,
+  bounded operator setpoints, npm lockfile, and frontend unit tests.
+- HMI CI gate for npm audit, ESLint, Prettier, Svelte type checking, Vitest, and
+  static production builds.
 
 ### Changed
 
@@ -28,7 +36,11 @@ HydraSim follows semantic versioning intent:
 - Split large legacy modules into smaller HydraSim modules.
 - Modernized Python package metadata with SPDX license metadata, project URLs,
   typed package marker, and explicit tool configuration.
-- Expanded CI from a partial project check to the full local quality gate.
+- Expanded CI from a partial project check to the full local quality gate,
+  including package coverage and distribution-build readiness.
+- Expanded the 500-line quality policy from Python-only checks to Python,
+  Svelte, TypeScript, JavaScript, and CSS code files.
+- Documented the browser/runtime boundary for the simulation-only HMI.
 
 ### Removed
 

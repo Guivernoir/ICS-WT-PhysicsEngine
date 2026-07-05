@@ -15,3 +15,11 @@ updates:
     labels:
       - "dependencies"
       - "python"
+
+  - package-ecosystem: "npm"
+    directory: "/hmi"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "hmi"
