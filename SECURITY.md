@@ -6,8 +6,20 @@ HydraSim is a simulation and test harness. It is not certified design authority,
 commissioning evidence, safety validation, or real-plant validation.
 
 Security reports should relate to the HydraSim codebase, package metadata,
-generated artifacts, local simulator behavior, or CI/release process. Do not use
-HydraSim to test systems you do not own or administer.
+generated artifacts, local simulator behavior, or CI/release process.
+
+Do not use HydraSim to test systems you do not own or administer. Do not submit
+third-party plant details, credentials, production packet captures, or exploit
+steps against real infrastructure.
+
+## Supported Versions
+
+| Version | Supported |
+| --- | --- |
+| Current `main` branch | Yes |
+| Latest tagged release | Yes |
+| Older tagged releases | Best effort |
+| Forks or modified deployments | No |
 
 ## Reporting
 
@@ -22,3 +34,10 @@ Please include:
 - Reproduction steps against a local HydraSim instance.
 - Expected impact and any known workaround.
 - Whether third-party systems or sensitive data were involved.
+
+## Disclosure
+
+Reports are triaged for reproducibility, affected versions, and user impact.
+Security fixes should land with tests or quality-gate coverage whenever
+practical. Public disclosure should wait until a fix or mitigation is available,
+unless the issue is already public or actively exploited.

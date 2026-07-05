@@ -40,6 +40,8 @@ dependencies = [
 Homepage = "https://github.com/Guivernoir/HydraSim"
 Repository = "https://github.com/Guivernoir/HydraSim"
 Issues = "https://github.com/Guivernoir/HydraSim/issues"
+Changelog = "https://github.com/Guivernoir/HydraSim/blob/main/CHANGELOG.md"
+Security = "https://github.com/Guivernoir/HydraSim/security"
 
 [project.optional-dependencies]
 modbus = [
@@ -77,6 +79,9 @@ target-version = ["py311", "py312", "py313", "py314"]
 python_version = "3.11"
 ignore_missing_imports = true
 check_untyped_defs = true
+# Keep Mypy focused on HydraSim source; scientific dependency stubs can use
+# syntax newer than HydraSim's minimum Python target.
+no_site_packages = true
 
 [tool.ruff]
 line-length = 88

@@ -1,7 +1,7 @@
 # HydraSim
 
 [![Quality](https://github.com/Guivernoir/HydraSim/actions/workflows/quality.yml/badge.svg)](https://github.com/Guivernoir/HydraSim/actions/workflows/quality.yml)
-![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13%20%7C%203.14-blue)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Code files](https://img.shields.io/badge/code%20files-%3C%3D500%20lines-brightgreen)
 
@@ -27,9 +27,10 @@ security policy, and this README. Internal planning notes stay in ignored
 `.private/docs` files and are not part of the public repository.
 
 The package targets Python 3.11 and newer, with CI coverage for Python 3.11,
-3.13, and 3.14. CI is also the repository quality contract: formatting, lint,
-types, dependency checks, syntax compilation, deterministic project checks, the
-500-line code-file limit, and the full unit/Modbus test suite must all pass.
+3.12, 3.13, and 3.14. CI is also the repository quality contract: formatting,
+lint, types, dependency checks, syntax compilation, deterministic project
+checks, the 500-line code-file limit, and the full unit/Modbus test suite must
+all pass.
 
 ## Why HydraSim
 
@@ -63,6 +64,18 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,modbus]"
 python -m hydrasim --no-modbus --duration 10 --dt 1
+```
+
+Expected startup output includes the initialized reactor, actuator suite, sensor
+suite, and clean shutdown path:
+
+```text
+HYDRASIM REACTOR SIMULATION
+[PHASE 1] Initializing physics engine...
+Reactor initialized: 5 zones, V=1000.0L
+[PHASE 5] Skipping Modbus (--no-modbus)
+[PHASE 6] Starting simulation loop...
+Simulation stopped cleanly
 ```
 
 Run the full local gate:
@@ -126,7 +139,8 @@ hs-sim --scenario custom --scenario-custom-json examples/custom_scenario_templat
 ## Public Surface
 
 HydraSim keeps internal planning notes private. The public repository exposes
-the simulator, tests, examples, CI policy, and this README.
+the simulator, tests, examples, CI policy, package metadata, license, security
+policy, contribution guide, changelog, and this README.
 
 Built-in MVP scenario IDs:
 `MVP-MB-HYDRA-002`, `MVP-MB-HYDRA-003`, `MVP-MB-HYDRA-004`,
@@ -191,6 +205,15 @@ local development:
 
 The quality gate has no oversized-module allowlist. If a Python file grows past
 500 lines, CI fails and the code should be split before merging.
+
+## Contributing And Releases
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the local development workflow,
+quality expectations, and public/private documentation rules.
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes. HydraSim uses semantic
+versioning intent: patch releases for fixes, minor releases for compatible
+features, and major releases for breaking public API or command changes.
 
 ## License
 
