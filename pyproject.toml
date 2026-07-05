@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "water-treatment-sim"
+name = "hydrasim"
 version = "1.1.0"
 description = "Multi-zone water treatment simulator with reactor physics, sensors, actuators, and Modbus TCP integration"
 readme = "README.md"
@@ -11,9 +11,21 @@ requires-python = ">=3.11"
 authors = [
     { name = "Guilherme F. G. Santos" }
 ]
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = [
+    "water-treatment",
+    "modbus",
+    "simulation",
+    "process-control",
+    "digital-twin",
+]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
     "Topic :: System :: Monitoring",
@@ -24,24 +36,29 @@ dependencies = [
     "scipy>=1.11,<2",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Guivernoir/HydraSim"
+Repository = "https://github.com/Guivernoir/HydraSim"
+Issues = "https://github.com/Guivernoir/HydraSim/issues"
+
 [project.optional-dependencies]
 modbus = [
     "pymodbus>=3.11,<3.13",
 ]
 dev = [
     "pytest>=8.0",
-    "black>=24.0",
-    "ruff>=0.6",
-    "mypy>=1.10",
+    "black>=25.1",
+    "ruff>=0.12",
+    "mypy>=1.16",
 ]
 
 [project.scripts]
-wts-sim = "wt_simulator.__main__:main"
-wts-mvp-modbus-scenario = "wt_simulator.scenarios.mvp_modbus:main"
-wts-run-scenario = "wt_simulator.scenarios.run:main"
-wts-validate-scenario = "wt_simulator.scenarios.validate:main"
-wts-export-lab-bundle = "wt_simulator.scenarios.bundle:main"
-wts-ics = "wt_simulator.ics.cli:main"
+hs-sim = "hydrasim.__main__:main"
+hs-mvp-modbus-scenario = "hydrasim.scenarios.mvp_modbus:main"
+hs-run-scenario = "hydrasim.scenarios.run:main"
+hs-validate-scenario = "hydrasim.scenarios.validate:main"
+hs-export-lab-bundle = "hydrasim.scenarios.bundle:main"
+hs-plant = "hydrasim.plant.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -49,6 +66,18 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+hydrasim = ["py.typed"]
+
 [tool.black]
 line-length = 88
-target-version = ["py311"]
+target-version = ["py311", "py312", "py313", "py314"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"

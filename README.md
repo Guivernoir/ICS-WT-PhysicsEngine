@@ -1,174 +1,203 @@
 # HydraSim
 
-Water treatment process simulator with:
-- Multi-zone reactor physics (mixing, advection, pH/chlorine chemistry, temperature)
-- Actuator dynamics (valves and dosing pump behavior)
-- Sensor dynamics (delay, noise, drift, warm-up, faults)
-- Remote maintenance (Modbus-driven recalibration and hardware-replacement actions)
-- Modbus TCP server for plant-style command/feedback integration
-- Deterministic Modbus MVP scenario profiles for external traffic generators
-- Scenario command-center runner for repeatable local Modbus traffic generation
-- Configurable Reference Water Plant profiles for staged ICS-style lab bundles
-- CFD/digital-twin foundation primitives for bounded finite-volume water-treatment models
-- CFD-backed process-evolution truth for built-in reference plant scenarios
-- Scenario process-truth review records for demo/training coherence checks
-- CFD Lab Bundle v2 artifacts with compact mesh, geometry, scalar, flow, and state evidence
-- Runtime Performance Gate evidence for bounded local CFD presets
-- Digital-Twin Validation Gate evidence separating implementation verification from real-plant validation
-- External Review And Calibration Evidence Gate records for non-validating review evidence
-- Reference Water Plant CFD release-candidate checklist and command surface
+[![Quality](https://github.com/Guivernoir/HydraSim/actions/workflows/quality.yml/badge.svg)](https://github.com/Guivernoir/HydraSim/actions/workflows/quality.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.13%20%7C%203.14-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![Code files](https://img.shields.io/badge/code%20files-%3C%3D500%20lines-brightgreen)
 
-HydraSim is designed to emulate realistic water treatment process behavior for integration and control testing against real-world PLC/SCADA systems. It allows engineers and researchers to prototype control logic, validate operational behaviors, and exercise control loops without access to physical hardware.
+HydraSim is a Python water-treatment process simulator for control-system
+integration, Modbus testing, synthetic plant traffic, and bounded CFD/digital
+twin experiments.
 
-The goal is practical plant-behavior emulation for integration and control testing. The post-HS-20 direction adds bounded in-process CFD/digital-twin primitives, including `synthetic_digital_twin_validation_gate` records whose current real-plant validation status is `blocked_missing_real_calibration_and_external_validation`. HS-34A also adds `synthetic_external_review_calibration_gate` records that default to `pending_external_review` and never auto-upgrade model status. HS-35 adds `synthetic_reference_water_plant_cfd_release_candidate` evidence tying the current offline, selected-area live, CFD gate, and bundle surfaces into one release-candidate checklist. HydraSim still must not be treated as certified design authority, commissioning evidence, safety validation, or real-plant equivalence without separate calibration and validation evidence.
+It gives you a local process endpoint that behaves like a small field-facing
+water plant unit: reactor physics evolve over time, actuators change process
+boundaries, sensors report delayed/noisy/faultable measurements, and Modbus
+registers expose command and feedback surfaces for PLC/SCADA-style clients.
 
-## Architecture
+HydraSim is simulation and test infrastructure. It is **not certified design authority**,
+commissioning evidence, safety validation, or real-plant validation, and it is
+not proof of plant equivalence without separate calibration and external
+validation.
 
-Runtime loop:
-1. Read Modbus holding registers/coils.
-2. Apply commands to actuator models.
-3. Map actuator outputs to reactor boundary flows.
-4. Step reactor physics.
-5. Read sensors from reactor state.
-6. Publish sensor values/status to Modbus input registers/discrete inputs.
-7. Poll maintenance trigger coil; dispatch any pending maintenance action.
+## Repository Status
 
-This keeps command sources external while the simulator acts like a field-facing process unit.
+HydraSim is the project root and the public GitHub surface is intentionally
+small: source code, tests, examples, CI policy, package metadata, license,
+security policy, and this README. Internal planning notes stay in ignored
+`.private/docs` files and are not part of the public repository.
 
-## Install
+The package targets Python 3.11 and newer, with CI coverage for Python 3.11,
+3.13, and 3.14. CI is also the repository quality contract: formatting, lint,
+types, dependency checks, syntax compilation, deterministic project checks, the
+500-line code-file limit, and the full unit/Modbus test suite must all pass.
+
+## Why HydraSim
+
+Control-system integration work often needs a repeatable process target before
+plant hardware, PLC logic, or historian infrastructure is available. HydraSim
+fills that gap by giving local clients deterministic process behavior,
+plant-style register surfaces, generated evidence artifacts, and clear limits on
+what is synthetic versus externally validated.
+
+## What It Does
+
+- Simulates multi-zone reactor physics: mixing, advection, pH/chlorine
+  chemistry, ammonia/chloramine behavior, demand, and temperature.
+- Models realistic sensors and actuators: delay, noise, drift, warm-up,
+  saturation, faults, valves, and dosing pumps.
+- Exposes a Modbus TCP process endpoint with plant-style command and feedback
+  registers.
+- Generates deterministic Modbus scenarios, transcripts, PCAPs, and lab
+  bundles for repeatable local testing.
+- Provides staged Reference Water Plant profiles for offline export, selected
+  area runs, and live-plan generation.
+- Includes bounded CFD/digital-twin primitives and evidence gates that separate
+  implementation verification from real-plant validation.
+- Enforces repository quality with formatting, lint, type checks, tests,
+  public README coverage checks, and a no-exceptions 500-line code-file limit.
+
+## Quickstart
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,modbus]"
+python -m pip install -e ".[dev,modbus]"
+python -m hydrasim --no-modbus --duration 10 --dt 1
 ```
 
-For runtime-only Modbus support outside development:
+Run the full local gate:
 
 ```bash
-pip install -e ".[modbus]"
+python -m pip check
+python -m black --check src tests tools
+python -m ruff check src tools tests
+python -m mypy src/hydrasim
+python -m compileall -q src tests tools
+python tools/check_project_quality.py
+python -m unittest discover -s tests -v
 ```
 
-## Run
+## Common Commands
 
-With Modbus:
+Start a Modbus process endpoint:
 
 ```bash
-python -m src.wt_simulator --host 127.0.0.1 --port 5020
+python -m hydrasim --host 127.0.0.1 --port 5020
 ```
 
-Without Modbus:
+Run a built-in scenario against that endpoint:
 
 ```bash
-python -m src.wt_simulator --no-modbus --duration 120 --dt 1
+hs-run-scenario water-treatment-normal --mode live --host 127.0.0.1 --port 5020
 ```
 
-Export a deterministic MVP Modbus scenario transcript:
+Start the simulator and replay a scenario from one command:
 
 ```bash
-wts-mvp-modbus-scenario MVP-MB-HYDRA-002 --format csv --output hydra-002.csv
-wts-mvp-modbus-scenario MVP-MB-HYDRA-003 --format markdown --output hydra-003.md
+hs-sim --host 127.0.0.1 --port 5020 --scenario water-treatment-normal
 ```
 
-Run a built-in command-center scenario against a HydraSim process endpoint:
+Export deterministic scenario evidence:
 
 ```bash
-wts-sim --host 127.0.0.1 --port 5020
-wts-run-scenario water-treatment-normal --mode live --host 127.0.0.1 --port 5020
+hs-run-scenario water-treatment-smart-field --mode transcript --format markdown
+hs-run-scenario water-treatment-noisy-network --mode transcript --format pcap --output noisy.pcap
+hs-export-lab-bundle water-treatment-smart-field ./hydrasim-smart-field-bundle
 ```
 
-Export a multi-endpoint smart-field scenario:
+Work with the staged Reference Water Plant profiles:
 
 ```bash
-wts-run-scenario water-treatment-smart-field --mode transcript --format markdown
+hs-plant list-profiles
+hs-plant validate-profile reference-water-plant
+hs-plant run reference-water-plant --scenario HS-WTP-002 --area disinfection --stage full-cell --format markdown
+hs-plant export-bundle reference-water-plant HS-WTP-002 ./reference-water-bundle --area all --stage offline-export
+hs-plant launch-live reference-water-plant --scenario HS-WTP-002 --area disinfection --stage full-cell --dry-run
 ```
 
-Export a broader HS-6 scenario family:
+Run or validate a custom JSON scenario:
 
 ```bash
-wts-run-scenario water-treatment-misconfiguration --mode transcript --format markdown
-wts-run-scenario water-treatment-noisy-network --mode transcript --format pcap --output noisy.pcap
+hs-run-scenario custom --custom-json examples/custom_scenario_template.json --mode transcript
+hs-validate-scenario custom --custom-json examples/custom_scenario_template.json
+hs-sim --scenario custom --scenario-custom-json examples/custom_scenario_template.json
 ```
 
-Export a complete deterministic lab bundle:
+## Public Surface
 
-```bash
-wts-export-lab-bundle water-treatment-smart-field ./hydrasim-smart-field-bundle
-```
+HydraSim keeps internal planning notes private. The public repository exposes
+the simulator, tests, examples, CI policy, and this README.
 
-List and export staged Reference Water Plant profiles:
+Built-in MVP scenario IDs:
+`MVP-MB-HYDRA-002`, `MVP-MB-HYDRA-003`, `MVP-MB-HYDRA-004`,
+`MVP-MB-HYDRA-005`, `MVP-MB-HYDRA-006`, `MVP-MB-HYDRA-007`,
+`MVP-MB-HYDRA-008`, and `MVP-MB-HYDRA-009`.
 
-```bash
-wts-ics list-profiles
-wts-ics validate-profile reference-water-plant
-wts-ics run reference-water-plant --scenario ICS-WTP-002 --area disinfection --stage full-cell --format markdown
-wts-ics export-bundle reference-water-plant ICS-WTP-002 ./reference-water-bundle --area all --stage offline-export
-wts-ics launch-live reference-water-plant --scenario ICS-WTP-002 --area disinfection --stage full-cell --dry-run
-```
+Reference Water Plant profiles:
+`single-stage-legacy`, `field-device-lab`, `controller-cell`,
+`supervisory-lab`, and `reference-water-plant`.
 
-Or start the process endpoint and scenario replay from one simulator command:
+Reference Water Plant scenario IDs:
+`HS-WTP-001`, `HS-WTP-002`, `HS-WTP-003`, `HS-WTP-004`, `HS-WTP-005`,
+`HS-WTP-006`, `HS-WTP-007`, `HS-WTP-008`, `HS-WTP-009`, `HS-WTP-010`,
+`HS-WTP-011`, and `HS-WTP-012`.
 
-```bash
-wts-sim --host 127.0.0.1 --port 5020 --scenario water-treatment-normal
-```
+Reference plant areas:
+`intake`, `dosing`, `clarification`, `filtration`, `disinfection`, and
+`storage-pumping`.
 
-Run or export a custom JSON scenario:
+CFD/digital-twin public evidence surfaces include the Runtime Performance Gate,
+Digital-Twin Validation Gate, External Review And Calibration Evidence Gate,
+CFD Lab Bundle v2, and Reference Water Plant CFD release-candidate output. CFD
+evidence is synthetic unless separately calibrated and externally validated.
 
-```bash
-wts-run-scenario custom --custom-json docs/CUSTOM_SCENARIO_TEMPLATE.json --mode transcript
-wts-validate-scenario custom --custom-json docs/CUSTOM_SCENARIO_TEMPLATE.json
-wts-sim --scenario custom --scenario-custom-json docs/CUSTOM_SCENARIO_TEMPLATE.json
-```
+## Architecture
 
-These scenarios describe synthetic external client behavior. HydraSim remains a
-simulator; passive observers should remain passive unless a separate test
-intentionally makes them clients.
+The runtime loop keeps controller intent outside the physics model:
 
-## Test
+1. Read Modbus holding registers and coils.
+2. Apply commands to actuator models.
+3. Map actuator outputs to reactor boundary flows.
+4. Step reactor physics.
+5. Read sensors from reactor state.
+6. Publish sensor values and status to Modbus input registers and discrete inputs.
+7. Poll maintenance registers and dispatch any pending maintenance action.
 
-```bash
-.venv/bin/python -m pip install -e ".[dev,modbus]"
-.venv/bin/python -m unittest discover -s tests -v
-```
+The main packages are:
 
-Run the local quality gate:
+- `src/hydrasim/core`: reactor physics, chemistry, transport, and spatial models.
+- `src/hydrasim/actuators`: control valves and dosing pumps.
+- `src/hydrasim/sensors`: sensor models and suite factory.
+- `src/hydrasim/modbus`: register map, encoding, and Modbus TCP server.
+- `src/hydrasim/maintenance`: remote recalibration and hardware replacement actions.
+- `src/hydrasim/scenarios`: deterministic Modbus scenario library and runner.
+- `src/hydrasim/plant`: staged Reference Water Plant profiles, artifacts, and CLI.
+- `src/hydrasim/hydraulics`: bounded CFD/digital-twin primitives.
 
-```bash
-.venv/bin/python -m pip install -e ".[dev,modbus]"
-.venv/bin/python tools/check_project_quality.py
-.venv/bin/python -m black --check src/wt_simulator/scenarios src/wt_simulator/ics src/wt_simulator/hydraulics tests/test_mvp_modbus_scenarios.py tests/test_ics_runtime.py tests/test_cfd_digital_twin.py tests/test_cfd_coupling.py tests/test_cfd_operator_semantics.py tests/test_cfd_calibration_evidence.py tests/test_cfd_verification.py tools
-.venv/bin/python -m unittest discover -s tests -v
-```
+## Quality Standard
 
-The full quality gate requires the `pymodbus` dependency so the live Modbus
-end-to-end tests run instead of being skipped.
+HydraSim CI installs `.[dev,modbus]` and enforces the same gate intended for
+local development:
 
-## Project Layout
+- Black formatting on `src`, `tests`, and `tools`.
+- Ruff linting on `src`, `tests`, and `tools`.
+- Mypy type checking for `src/hydrasim`.
+- Dependency consistency checks through `pip check`.
+- Syntax compilation checks through `compileall`.
+- Project quality policy checks, including public README coverage, deterministic
+  artifact checks, Modbus dependency checks, folder density, and the hard
+  500-line limit for every Python code file.
+- Full unit and live Modbus end-to-end test discovery.
 
-- `src/wt_simulator/core`: reactor physics and transport/chemistry models
-- `src/wt_simulator/hydraulics`: CFD/digital-twin foundations for bounded water-treatment meshes, flow, scalar transport, and area models
-- `src/wt_simulator/actuators`: valves and dosing pump dynamics
-- `src/wt_simulator/sensors`: sensor models and suite factory
-- `src/wt_simulator/maintenance`: remote recalibration and hardware-replacement manager
-- `src/wt_simulator/modbus`: register map, encoding, and Modbus server
-- `src/wt_simulator/ics`: staged Reference Water Plant profiles, scenarios, artifacts, and CLI
-- `src/wt_simulator/__main__.py`: runtime orchestration loop
-- `tests`: unit and end-to-end Modbus tests
-
-## Documentation
-
-- `docs/MODEL_SCOPE.md`: what the model includes and what it does not
-- `docs/CFD_DIGITAL_TWIN_ROADMAP.md`: HS-21 through HS-35 CFD/digital-twin foundation roadmap and current gate
-- `docs/HYDRASIM_TODAY_BEFORE_AFTER.md`: summary of the Reference Water Plant roadmap and implementation changes
-- `docs/IMPLEMENTATION_PROCESS.md`: lock-first slice process and verification expectations
-- `docs/INDUSTRIAL_SIMULATOR_ROADMAP.md`: HS-8 through HS-20 plan for staged ICS simulator evolution
-- `docs/MODBUS_INTERFACE.md`: command/feedback register behavior, control loop mapping, and maintenance register protocol
-- `docs/MVP_MODBUS_SCENARIOS.md`: deterministic multi-client and unknown-host Modbus scenario profiles for synthetic traffic generation
-- `docs/QUALITY_BASELINE.md`: current quality gate and legacy oversized-module baseline
-- `docs/REFERENCE_WATER_PLANT.md`: profile-driven Reference Water Plant commands, scenarios, artifacts, and limits
-- `docs/SCENARIO_RUNTIME.md`: command-center runner, custom scenarios, live replay, and passive capture boundary
-- `docs/SLICE_ROADMAP.md`: HydraSim slice sequence and current implementation gate
+The quality gate has no oversized-module allowlist. If a Python file grows past
+500 lines, CI fails and the code should be split before merging.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
+
+## Security
+
+HydraSim is simulation-only infrastructure. Do not use it to test systems you do
+not own or administer. Report vulnerabilities and sensitive safety concerns
+through the private process in [SECURITY.md](SECURITY.md).

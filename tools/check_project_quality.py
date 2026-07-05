@@ -1,9 +1,4 @@
-"""HydraSim project quality checks.
-
-This checker is intentionally dependency-free so it can run before optional
-developer tooling is installed. It enforces the quality shape introduced by the
-scenario runtime slices while tracking older oversized modules as known debt.
-"""
+"""HydraSim project quality checks."""
 
 from __future__ import annotations
 
@@ -13,7 +8,7 @@ import sys
 import importlib.util
 from pathlib import Path
 
-from quality_ics import check_ics_docs
+from quality_hs import check_hs_docs
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -22,21 +17,10 @@ if str(SRC) not in sys.path:
 
 MAX_FILES_PER_FOLDER = 20
 MAX_LINES = 500
-LEGACY_OVERSIZED = {
-    "src/wt_simulator/__main__.py",
-    "src/wt_simulator/core/chemistry.py",
-    "src/wt_simulator/core/reactor.py",
-    "src/wt_simulator/core/spatial.py",
-    "src/wt_simulator/core/transport.py",
-    "src/wt_simulator/maintenance/maintenance_manager.py",
-    "src/wt_simulator/modbus/register_map.py",
-    "src/wt_simulator/modbus/slave.py",
-    "src/wt_simulator/sensors/base_sensor.py",
-    "src/wt_simulator/sensors/chlorine_sensor.py",
-    "src/wt_simulator/sensors/ph_sensor.py",
-}
+CODE_FILE_SUFFIXES = {".py", ".pyi"}
 SKIP_DIRS = {
     ".git",
+    ".private",
     ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
@@ -74,14 +58,17 @@ def _check_folder_density(errors: list[str]) -> None:
             )
 
 
-def _check_line_counts(files: list[Path], errors: list[str]) -> None:
+def _check_code_line_counts(files: list[Path], errors: list[str]) -> None:
     for path in files:
-        if path.suffix != ".py":
+        if path.suffix not in CODE_FILE_SUFFIXES:
             continue
         rel = _rel(path)
         lines = path.read_text("utf-8").splitlines()
-        if len(lines) > MAX_LINES and rel not in LEGACY_OVERSIZED:
-            errors.append(f"{rel}: {len(lines)} lines exceeds {MAX_LINES}")
+        if len(lines) > MAX_LINES:
+            errors.append(
+                f"{rel}: {len(lines)} lines exceeds hard {MAX_LINES}-line "
+                "code-file limit; split the module"
+            )
 
 
 def _target_exists(source: Path, target: str) -> bool:
@@ -106,22 +93,20 @@ def _check_markdown_links(files: list[Path], errors: list[str]) -> None:
 
 
 def _check_scenario_docs(errors: list[str]) -> None:
-    from wt_simulator.scenarios import get_scenario, scenario_ids, validate_scenario
+    from hydrasim.scenarios import get_scenario, scenario_ids, validate_scenario
 
-    docs = (ROOT / "docs" / "MVP_MODBUS_SCENARIOS.md").read_text("utf-8") + (
-        ROOT / "docs" / "SCENARIO_RUNTIME.md"
-    ).read_text("utf-8")
+    public_docs = (ROOT / "README.md").read_text("utf-8")
     for scenario_id in scenario_ids():
         scenario = get_scenario(scenario_id)
         problems = validate_scenario(scenario)
         if problems:
             errors.append(f"{scenario_id}: validation failed: {problems}")
-        if scenario_id not in docs:
-            errors.append(f"{scenario_id}: missing from scenario docs")
+        if scenario_id not in public_docs:
+            errors.append(f"{scenario_id}: missing from public README")
 
 
 def _check_cfd_docs(errors: list[str]) -> None:
-    from wt_simulator.hydraulics.cfd import (
+    from hydrasim.hydraulics.cfd import (
         AREA_IDS,
         CalibrationStatus,
         TwinStatus,
@@ -154,27 +139,24 @@ def _check_cfd_docs(errors: list[str]) -> None:
         unit_process_catalog,
     )
 
-    cfd_doc = ROOT / "docs" / "CFD_DIGITAL_TWIN_ROADMAP.md"
-    docs = (
-        (ROOT / "README.md").read_text("utf-8")
-        + (ROOT / "docs" / "MODEL_SCOPE.md").read_text("utf-8")
-        + (ROOT / "docs" / "SLICE_ROADMAP.md").read_text("utf-8")
-        + cfd_doc.read_text("utf-8")
-    )
-    required_phrases = (
-        "synthetic_unvalidated",
-        "synthetic_verified",
-        "calibration_ready",
-        "evidence_calibrated",
-        "certification",
+    public_docs = (ROOT / "README.md").read_text("utf-8")
+    required_public_phrases = (
+        "bounded CFD/digital-twin primitives",
+        "Runtime Performance Gate",
+        "Digital-Twin Validation Gate",
+        "External Review And Calibration Evidence Gate",
+        "CFD Lab Bundle v2",
+        "Reference Water Plant CFD release-candidate",
+        "synthetic",
+        "certified design authority",
         "real-plant validation",
     )
-    for phrase in required_phrases:
-        if phrase not in docs:
-            errors.append(f"CFD docs: missing required phrase {phrase!r}")
+    for phrase in required_public_phrases:
+        if phrase not in public_docs:
+            errors.append(f"public README: missing CFD phrase {phrase!r}")
     for area_id in AREA_IDS:
-        if area_id not in docs:
-            errors.append(f"{area_id}: missing from CFD docs")
+        if area_id not in public_docs:
+            errors.append(f"{area_id}: missing from public README")
         model = reference_area_model(area_id)
         model.validate()
         assessment = build_reference_calibration_assessment(
@@ -192,15 +174,11 @@ def _check_cfd_docs(errors: list[str]) -> None:
             errors.append(f"{area_id}: CFD summary export is not deterministic")
     for unit in unit_process_catalog():
         unit.validate()
-        if unit.unit_id not in docs:
-            errors.append(f"{unit.unit_id}: missing from CFD docs")
         limitation_text = " ".join(unit.limitations)
         if "not a certified design model" not in limitation_text:
             errors.append(f"{unit.unit_id}: missing no-overclaim limitation")
     for contract in boundary_condition_catalog():
         contract.validate()
-        if contract.condition_id not in docs:
-            errors.append(f"{contract.condition_id}: missing from CFD docs")
         limitation_text = " ".join(contract.limitations)
         if (
             "not a commissioning or design-authority boundary model"
@@ -209,12 +187,8 @@ def _check_cfd_docs(errors: list[str]) -> None:
             errors.append(f"{contract.condition_id}: missing no-overclaim limitation")
     for preset in performance_presets():
         preset.validate()
-        if preset.preset_id not in docs:
-            errors.append(f"{preset.preset_id}: missing from CFD docs")
     for budget in runtime_performance_budgets():
         budget.validate()
-        if budget.preset_id not in docs:
-            errors.append(f"{budget.preset_id}: performance budget missing from docs")
     performance_records = build_runtime_performance_gate(iterations=1)
     for record in performance_records:
         record.validate()
@@ -225,14 +199,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
         errors.append("CFD runtime performance gate export is not deterministic")
     if "synthetic_runtime_performance_gate" not in rendered_gate:
         errors.append("CFD runtime performance gate: missing evidence status")
-    for phrase in (
-        "HS-33",
-        "Runtime Performance Gate",
-        "synthetic_runtime_performance_gate",
-        "not hardware qualification",
-    ):
-        if phrase not in docs:
-            errors.append(f"CFD runtime performance docs: missing {phrase!r}")
     validation_gate = build_digital_twin_validation_gate()
     validation_gate.validate()
     if not validation_gate.implementation_verified:
@@ -247,14 +213,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
         errors.append("CFD validation gate export is not deterministic")
     if "synthetic_digital_twin_validation_gate" not in rendered_validation:
         errors.append("CFD validation gate: missing evidence status")
-    for phrase in (
-        "HS-34",
-        "Digital-Twin Validation Gate",
-        "synthetic_digital_twin_validation_gate",
-        "blocked_missing_real_calibration_and_external_validation",
-    ):
-        if phrase not in docs:
-            errors.append(f"CFD validation gate docs: missing {phrase!r}")
     review_gate = build_external_review_calibration_gate()
     review_gate.validate()
     if review_gate.evidence_disposition != "pending_external_review":
@@ -266,14 +224,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
         errors.append("CFD review gate export is not deterministic")
     if "synthetic_external_review_calibration_gate" not in rendered_review:
         errors.append("CFD review gate: missing evidence status")
-    for phrase in (
-        "HS-34A",
-        "External Review And Calibration Evidence Gate",
-        "synthetic_external_review_calibration_gate",
-        "pending_external_review",
-    ):
-        if phrase not in docs:
-            errors.append(f"CFD review gate docs: missing {phrase!r}")
     sensor_count = 0
     actuator_count = 0
     for contract in device_coupling_catalog():
@@ -291,9 +241,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
         errors.append("CFD device coupling: missing sensor contracts")
     if actuator_count == 0:
         errors.append("CFD device coupling: missing actuator contracts")
-    for phrase in ("HS-27", "Device-To-CFD Coupling", "simulated_metadata"):
-        if phrase not in docs:
-            errors.append(f"CFD device coupling docs: missing {phrase!r}")
     controller_count = 0
     for contract in controller_coupling_catalog():
         contract.validate()
@@ -304,13 +251,8 @@ def _check_cfd_docs(errors: list[str]) -> None:
             )
     if controller_count == 0:
         errors.append("CFD controller coupling: missing controller contracts")
-    for phrase in ("HS-28", "Controller-To-CFD Coupling"):
-        if phrase not in docs:
-            errors.append(f"CFD controller coupling docs: missing {phrase!r}")
     for profile in supervisory_profile_catalog():
         profile.validate()
-        if profile.profile_id not in docs:
-            errors.append(f"{profile.profile_id}: missing from CFD docs")
         if profile.evidence_status != "simulated_metadata":
             errors.append(
                 f"{profile.profile_id}: supervisory evidence status is not simulated"
@@ -326,9 +268,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
                 errors.append(f"{record.record_id}: evidence status is not simulated")
     if supervisory_record_count == 0:
         errors.append("CFD supervisory layer: missing reference records")
-    for phrase in ("HS-29", "Supervisory Digital-Twin Layer", "site identity"):
-        if phrase not in docs:
-            errors.append(f"CFD supervisory docs: missing {phrase!r}")
     semantic_bundle_count = 0
     for area_id in AREA_IDS:
         bundle = build_reference_operator_historian_semantics(area_id)
@@ -338,23 +277,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
             errors.append(f"{area_id}: operator/historian bundle is not simulated")
     if semantic_bundle_count == 0:
         errors.append("CFD operator/historian semantics: missing bundles")
-    for phrase in (
-        "HS-29A",
-        "Operator And Historian Semantics",
-        "not operational historian evidence",
-        "not a real operator action",
-    ):
-        if phrase not in docs:
-            errors.append(f"CFD operator/historian docs: missing {phrase!r}")
-    for phrase in (
-        "HS-30",
-        "Calibration And Uncertainty Framework",
-        "synthetic_calibrated",
-        "uncalibrated",
-        "not real-plant validation",
-    ):
-        if phrase not in docs:
-            errors.append(f"CFD calibration docs: missing {phrase!r}")
     field_source = CalibrationEvidenceSource(
         source_id="quality-field-source",
         evidence_class=CalibrationEvidenceClass.FIELD_TELEMETRY,
@@ -408,15 +330,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
     fit_assessment = assess_calibration_fit(fit)
     if fit_assessment.calibration_status != CalibrationStatus.EVIDENCE_CALIBRATED:
         errors.append("CFD calibration: explicit record did not support assessment")
-    for phrase in (
-        "HS-30B",
-        "Calibration Evidence Model",
-        "fitted_not_validated",
-        "rejected data",
-        "explicit calibration record",
-    ):
-        if phrase not in docs:
-            errors.append(f"CFD calibration evidence docs: missing {phrase!r}")
     suite = build_reference_numerical_verification_suite()
     suite.validate()
     if not suite.passed:
@@ -435,15 +348,6 @@ def _check_cfd_docs(errors: list[str]) -> None:
             "CFD numerical verification suite: missing categories "
             f"{sorted(missing_categories)}"
         )
-    for phrase in (
-        "HS-30A",
-        "Numerical Verification Suite",
-        "synthetic_numerical_verification",
-        "mesh refinement",
-        "long-run drift",
-    ):
-        if phrase not in docs:
-            errors.append(f"CFD verification docs: missing {phrase!r}")
 
 
 def _check_required_test_dependencies(errors: list[str]) -> None:
@@ -458,10 +362,10 @@ def main() -> int:
     errors: list[str] = []
     files = _project_files()
     _check_folder_density(errors)
-    _check_line_counts(files, errors)
+    _check_code_line_counts(files, errors)
     _check_markdown_links(files, errors)
     _check_scenario_docs(errors)
-    check_ics_docs(ROOT, errors)
+    check_hs_docs(ROOT, errors)
     _check_cfd_docs(errors)
     _check_required_test_dependencies(errors)
 

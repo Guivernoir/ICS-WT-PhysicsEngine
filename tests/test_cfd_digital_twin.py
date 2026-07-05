@@ -3,17 +3,10 @@
 from __future__ import annotations
 
 import unittest
-import sys
-from pathlib import Path
 
 import numpy as np
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from wt_simulator.hydraulics.cfd import (
+from hydrasim.hydraulics.cfd import (
     AREA_IDS,
     BoundaryPatch,
     CalibrationConfidence,
@@ -44,8 +37,8 @@ from wt_simulator.hydraulics.cfd import (
     unit_process_ids,
     units_by_area,
 )
-from wt_simulator.hydraulics.cfd.mesh import Obstacle
-from wt_simulator.hydraulics.cfd.turbulence import MixingModelConfig
+from hydrasim.hydraulics.cfd.mesh import Obstacle
+from hydrasim.hydraulics.cfd.turbulence import MixingModelConfig
 
 
 class CfdDigitalTwinTests(unittest.TestCase):

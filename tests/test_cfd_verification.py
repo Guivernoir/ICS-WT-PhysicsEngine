@@ -2,16 +2,9 @@
 
 from __future__ import annotations
 
-import sys
 import unittest
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from wt_simulator.hydraulics.cfd import (
+from hydrasim.hydraulics.cfd import (
     NumericalVerificationResult,
     build_reference_numerical_verification_suite,
     verify_boundary_condition_response,

@@ -1,14 +1,7 @@
 import socket
-import sys
 import time
 import importlib.util
-from pathlib import Path
 import unittest
-
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 if importlib.util.find_spec("pymodbus") is None:
     raise RuntimeError(
@@ -18,7 +11,7 @@ if importlib.util.find_spec("pymodbus") is None:
 
 from pymodbus.client import ModbusTcpClient
 
-from wt_simulator.__main__ import (
+from hydrasim.__main__ import (
     apply_actuator_commands,
     initialize_actuators,
     initialize_modbus_defaults,
@@ -30,12 +23,12 @@ from wt_simulator.__main__ import (
     step_actuators_into_boundary,
     update_modbus_inputs,
 )
-from wt_simulator.core import (
+from hydrasim.core import (
     BoundaryConditions,
     IntegratedCSTR,
     ReactorConfiguration,
 )
-from wt_simulator.modbus import (
+from hydrasim.modbus import (
     ModbusDecoder,
     ModbusEncoder,
     ModbusRegisterMap,

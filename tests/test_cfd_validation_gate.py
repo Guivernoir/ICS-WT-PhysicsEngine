@@ -3,16 +3,9 @@
 from __future__ import annotations
 
 import json
-import sys
 import unittest
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from wt_simulator.hydraulics.cfd import (
+from hydrasim.hydraulics.cfd import (
     AREA_IDS,
     EXTERNAL_COMPARISON_NOT_VALIDATION,
     REAL_PLANT_VALIDATION_BLOCKED,

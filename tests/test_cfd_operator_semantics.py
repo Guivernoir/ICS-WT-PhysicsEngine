@@ -2,16 +2,9 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from wt_simulator.hydraulics.cfd import (
+from hydrasim.hydraulics.cfd import (
     EngineeringWorkstationEvent,
     MaintenanceWindow,
     OperatorActionRecord,

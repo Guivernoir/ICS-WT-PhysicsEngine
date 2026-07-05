@@ -1,4 +1,3 @@
-import sys
 import contextlib
 import hashlib
 import io
@@ -7,12 +6,7 @@ import tempfile
 from pathlib import Path
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from wt_simulator.scenarios import (  # noqa: E402
+from hydrasim.scenarios import (  # noqa: E402
     export_lab_bundle,
     get_scenario,
     load_scenario_json,
@@ -418,7 +412,7 @@ class TestMvpModbusScenarios(unittest.TestCase):
         self.assertIn(bytes.fromhex("020000003131"), exported)
 
     def test_pcap_cli_requires_output_path(self):
-        from wt_simulator.scenarios.run import main
+        from hydrasim.scenarios.run import main
 
         with contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit):

@@ -28,3 +28,6 @@ htmlcov/
 # Local tooling and editor state
 .idea/
 .vscode/
+
+# Local/private project notes
+.private/
