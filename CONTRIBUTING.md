@@ -25,6 +25,13 @@ cd hmi
 npm ci
 ```
 
+The Rust runtime uses stable Rust:
+
+```bash
+cd runtime
+cargo check --locked
+```
+
 ## Quality Gate
 
 Run the full gate before proposing changes:
@@ -45,18 +52,27 @@ npm run lint
 npm run check
 npm run test
 npm run build
+cd ../runtime
+cargo fmt --check
+cargo check --locked
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
 ```
 
-The project quality checker enforces a hard 500-line limit for Python, Svelte,
-TypeScript, JavaScript, and CSS code files. Coverage reporting enforces the
-configured project floor in `pyproject.toml`. Split modules or components before
-crossing the line limit, and add tests before reducing coverage.
+The project quality checker enforces a hard 500-line limit for Python, Rust,
+Svelte, TypeScript, JavaScript, and CSS code files. Coverage reporting enforces
+the configured project floor in `pyproject.toml`. Split modules or components
+before crossing the line limit, and add tests before reducing coverage.
 
 ## Code Standards
 
 - Keep public package names under `hydrasim` and command names under `hs-*`.
-- Keep HMI code under `hmi` and use HydraSim, HS, or `hydrasim` naming.
-- Keep browser code behind the HMI API boundary; do not add browser-side Modbus.
+- Keep HMI code under `hmi`, Rust runtime code under `runtime`, and Python
+  simulation code under `src/hydrasim`.
+- Keep browser code behind the HMI API boundary; process, PCS, and protocol
+  logic belongs in Rust or Python, not in Svelte.
+- Keep Python focused on physical simulation. New network, media, PCS, or HMI
+  backend behavior belongs in Rust.
 - Prefer small modules with explicit boundaries over large legacy catch-all
   files.
 - Keep tests close to the behavior being changed.
@@ -81,6 +97,8 @@ production captures, or operational guidance for systems you do not own.
 - New or changed files use HydraSim, HS, or `hydrasim` naming.
 - HMI changes pass `npm audit`, `npm run lint`, `npm run check`,
   `npm run test`, and `npm run build`.
+- Rust runtime changes pass rustfmt, locked cargo check/test, and clippy with
+  warnings denied.
 - Security-sensitive reports follow [SECURITY.md](SECURITY.md).
 - The changelog is updated for user-visible behavior, metadata, CI, or policy
   changes.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { formatValue } from '$lib/processMath';
+  import { clamp, formatValue } from '$lib/processMath';
   import type { ProcessArea } from '$lib/types';
 
   let { areas }: { areas: readonly ProcessArea[] } = $props();
@@ -16,7 +16,7 @@
       <dl>
         <div>
           <dt>Flow</dt>
-          <dd>{formatValue(area.flowMgd, 2)} MGD</dd>
+          <dd>{formatValue(area.flowRate, 2)} {area.flowUnit}</dd>
         </div>
         <div>
           <dt>Level</dt>
@@ -31,6 +31,10 @@
           <dd>{formatValue(area.turbidityNtu, 2)} NTU</dd>
         </div>
       </dl>
+
+      <div class="area__level" style={`--level: ${clamp(area.tankLevelPercent, 0, 100)}%`}>
+        <span></span>
+      </div>
     </article>
   {/each}
 </section>
@@ -43,18 +47,29 @@
   }
 
   .area {
+    position: relative;
+    overflow: hidden;
     padding: 1rem;
     border: 1px solid var(--border);
-    border-top: 0.35rem solid var(--ok);
+    border-radius: var(--radius);
     background: var(--surface);
+    box-shadow: var(--shadow);
   }
 
-  .area--warning {
-    border-top-color: var(--warn);
+  .area::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 0.3rem;
+    content: '';
+    background: var(--ok);
   }
 
-  .area--alarm {
-    border-top-color: var(--danger);
+  .area--warning::before {
+    background: var(--warn);
+  }
+
+  .area--alarm::before {
+    background: var(--danger);
   }
 
   .area__heading {
@@ -72,8 +87,11 @@
   .area__heading span {
     padding: 0.2rem 0.45rem;
     border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-strong);
     color: var(--muted);
     font-size: 0.72rem;
+    font-weight: 800;
     text-transform: uppercase;
   }
 
@@ -91,11 +109,29 @@
 
   dt {
     color: var(--muted);
+    font-size: 0.9rem;
   }
 
   dd {
     margin: 0;
+    color: var(--text-strong);
     font-weight: 700;
+  }
+
+  .area__level {
+    height: 0.55rem;
+    margin-top: 0.9rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-strong);
+  }
+
+  .area__level span {
+    display: block;
+    width: var(--level);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
   }
 
   @media (max-width: 900px) {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, scalePath, statusForSignal, worstStatus } from './processMath';
+import {
+  clamp,
+  scaleAreaPath,
+  scaleLatestPoint,
+  scalePath,
+  statusForSignal,
+  worstStatus,
+} from './processMath';
 import type { ProcessSignal, TrendPoint } from './types';
 
 const signal: ProcessSignal = {
@@ -43,5 +50,38 @@ describe('processMath', () => {
     expect(
       scalePath(points, (point) => point.chlorine, { width: 100, height: 40, padding: 4 }),
     ).toMatchInlineSnapshot(`"M 4.0 36.0 L 96.0 4.0"`);
+  });
+
+  it('builds an svg area path for trend data', () => {
+    const points: TrendPoint[] = [
+      { minute: -2, ph: 7.1, chlorine: 1.0, flow: 4.0, turbidity: 0.2 },
+      { minute: -1, ph: 7.2, chlorine: 1.1, flow: 4.2, turbidity: 0.3 },
+    ];
+
+    expect(
+      scaleAreaPath(points, (point) => point.chlorine, { width: 100, height: 40, padding: 4 }),
+    ).toMatchInlineSnapshot(`"M 4.0 36.0 L 96.0 4.0 L 96.0 36.0 L 4.0 36.0 Z"`);
+  });
+
+  it('returns the latest scaled trend point', () => {
+    const points: TrendPoint[] = [
+      { minute: -2, ph: 7.1, chlorine: 1.0, flow: 4.0, turbidity: 0.2 },
+      { minute: -1, ph: 7.2, chlorine: 1.1, flow: 4.2, turbidity: 0.3 },
+    ];
+
+    expect(
+      scaleLatestPoint(points, (point) => point.chlorine, { width: 100, height: 40, padding: 4 }),
+    ).toEqual({ x: 96, y: 4 });
+  });
+
+  it('keeps flat trend lines visible in the middle of the chart', () => {
+    const points: TrendPoint[] = [
+      { minute: -2, ph: 7.2, chlorine: 1.0, flow: 4.0, turbidity: 0.2 },
+      { minute: -1, ph: 7.2, chlorine: 1.0, flow: 4.0, turbidity: 0.2 },
+    ];
+
+    expect(
+      scalePath(points, (point) => point.ph, { width: 100, height: 40, padding: 4 }),
+    ).toMatchInlineSnapshot(`"M 4.0 20.0 L 96.0 20.0"`);
   });
 });

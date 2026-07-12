@@ -13,8 +13,10 @@ third-party plant details, credentials, production packet captures, or exploit
 steps against real infrastructure.
 
 The SvelteKit HMI is a simulation-only operator interface. It must not connect
-directly to Modbus endpoints from the browser, embed credentials, or present
-synthetic telemetry as production plant state.
+directly to Modbus endpoints from the browser, embed credentials, implement PCS
+logic, or present synthetic telemetry as production plant state. Network and
+control boundaries belong in the Rust runtime. Python should remain a local
+physical simulation worker, not an exposed network service.
 
 ## Supported Versions
 

@@ -64,6 +64,7 @@ hs-run-scenario = "hydrasim.scenarios.run:main"
 hs-validate-scenario = "hydrasim.scenarios.validate:main"
 hs-export-lab-bundle = "hydrasim.scenarios.bundle:main"
 hs-plant = "hydrasim.plant.cli:main"
+hs-sim-worker = "hydrasim.simulation_worker:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

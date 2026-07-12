@@ -4,17 +4,17 @@
 [![Release](https://github.com/Guivernoir/HydraSim/actions/workflows/release.yml/badge.svg)](https://github.com/Guivernoir/HydraSim/actions/workflows/release.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)
 ![Node](https://img.shields.io/badge/node-24-green)
+![Rust](https://img.shields.io/badge/rust-stable-orange)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Code files](https://img.shields.io/badge/code%20files-%3C%3D500%20lines-brightgreen)
 
-HydraSim is a Python water-treatment process simulator with a SvelteKit HMI for
-control-system integration, Modbus testing, synthetic plant traffic, and bounded
-CFD/digital-twin experiments.
+HydraSim is a water-treatment simulator with a strict split between physical
+simulation, runtime systems, and operator interface.
 
-It gives you a local process endpoint that behaves like a small field-facing
-water plant unit: reactor physics evolve over time, actuators change process
-boundaries, sensors report delayed/noisy/faultable measurements, and Modbus
-registers expose command and feedback surfaces for PLC/SCADA-style clients.
+Python owns the process model: reactor physics, actuators, and sensors. Rust
+owns runtime systems: HMI API, PCS validation/interlocks, Modbus TCP, and the
+Python simulation worker boundary. Svelte owns the HMI surface only: display
+state and submit operator intent.
 
 HydraSim is simulation and test infrastructure. It is **not certified design authority**,
 commissioning evidence, safety validation, or real-plant validation, and it is
@@ -29,10 +29,11 @@ security policy, and this README. Internal planning notes stay in ignored
 `.private/docs` files and are not part of the public repository.
 
 The package targets Python 3.11 and newer, with CI coverage for Python 3.11,
-3.12, 3.13, and 3.14. The HMI targets Node 24 and current SvelteKit tooling. CI
-is also the repository quality contract: formatting, lint, types, dependency
-checks, syntax compilation, deterministic project checks, the 500-line code-file
-limit, and the full Python/HMI test suites must all pass.
+3.12, 3.13, and 3.14. The HMI targets Node 24 and current SvelteKit tooling.
+The Rust runtime targets stable Rust. CI is also the repository quality
+contract: formatting, lint, types, dependency checks, syntax compilation,
+deterministic project checks, the 500-line code-file limit, and the full
+Python/HMI/Rust runtime test suites must all pass.
 
 ## Why HydraSim
 
@@ -48,14 +49,14 @@ what is synthetic versus externally validated.
   chemistry, ammonia/chloramine behavior, demand, and temperature.
 - Models realistic sensors and actuators: delay, noise, drift, warm-up,
   saturation, faults, valves, and dosing pumps.
-- Exposes a Modbus TCP process endpoint with plant-style command and feedback
-  registers.
+- Exposes plant-style command and feedback surfaces through the Rust runtime.
 - Generates deterministic Modbus scenarios, transcripts, PCAPs, and lab
   bundles for repeatable local testing.
 - Provides staged Reference Water Plant profiles for offline export, selected
   area runs, and live-plan generation.
-- Ships a SvelteKit HMI dashboard for simulation-only process visibility,
-  scenario selection, trends, alarms, and bounded operator setpoint experiments.
+- Ships a SvelteKit HMI dashboard and Rust runtime for simulation-only process
+  visibility, individual signal charts, alarms, scenario selection, setpoints,
+  coils, and Modbus.
 - Includes bounded CFD/digital-twin primitives and evidence gates that separate
   implementation verification from real-plant validation.
 - Enforces repository quality with formatting, lint, type checks, tests,
@@ -104,7 +105,36 @@ npm ci
 npm run dev
 ```
 
-Run the HMI quality gate:
+Run the Rust runtime as the integrated HMI host. It launches the Python
+simulation worker over stdio, serves the HMI and API on `127.0.0.1:8088`, and
+keeps Modbus TCP disabled unless you explicitly enable it.
+
+```bash
+cd hmi
+npm run build
+cd ../runtime
+HS_RUNTIME_PYTHON=../.venv/bin/python cargo run
+```
+
+Open `http://127.0.0.1:8088`. The same origin serves the Svelte HMI, static
+assets, and `/api/*` runtime endpoints.
+
+Enable the Modbus TCP integration port only when testing a PLC or Modbus
+client:
+
+```bash
+cd runtime
+HS_RUNTIME_PYTHON=../.venv/bin/python HS_RUNTIME_MODBUS_ENABLED=true cargo run
+```
+
+Useful runtime probes from another shell:
+
+```bash
+curl http://127.0.0.1:8088/api/health
+curl http://127.0.0.1:8088/api/snapshot
+```
+
+Run the HMI and Rust runtime quality gates:
 
 ```bash
 cd hmi
@@ -113,7 +143,21 @@ npm run lint
 npm run check
 npm run test
 npm run build
+cd ../runtime
+cargo fmt --check
+cargo check --locked
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
 ```
+
+The integrated HMI smoke path is:
+
+1. Build the HMI with `npm run build`.
+2. Start Rust with `HS_RUNTIME_PYTHON=../.venv/bin/python cargo run`.
+3. Open `http://127.0.0.1:8088`.
+4. Confirm `/api/health` reports `runtime: "rust"` and `modbusEnabled: false`.
+5. For Modbus work, restart with `HS_RUNTIME_MODBUS_ENABLED=true` and confirm
+   `127.0.0.1:5502` accepts Modbus TCP reads.
 
 ## Common Commands
 
@@ -192,34 +236,43 @@ evidence is synthetic unless separately calibrated and externally validated.
 
 ## Architecture
 
-The runtime loop keeps controller intent outside the physics model:
+HydraSim uses three ownership boundaries:
 
-1. Read Modbus holding registers and coils.
-2. Apply commands to actuator models.
-3. Map actuator outputs to reactor boundary flows.
-4. Step reactor physics.
-5. Read sensors from reactor state.
-6. Publish sensor values and status to Modbus input registers and discrete inputs.
-7. Poll maintenance registers and dispatch any pending maintenance action.
+1. `hmi`: SvelteKit operator interface. It renders state and sends operator
+   intent over HTTP. It does not contain process, PCS, or protocol logic.
+2. `runtime`: Rust runtime. It owns the HMI API, PCS validation/interlocks,
+   Modbus TCP server, command state, and the Python worker lifecycle.
+3. `src/hydrasim`: Python process simulation. It owns physics, sensors,
+   actuators, physical scenarios, and the stdio simulation worker contract.
+
+The live HMI path is:
+
+```text
+Svelte HMI -> Rust HTTP API -> Rust PCS/runtime -> Python simulation worker
+                                      |
+                                      +-> Rust Modbus TCP server
+```
 
 The main packages are:
 
 - `src/hydrasim/core`: reactor physics, chemistry, transport, and spatial models.
 - `src/hydrasim/actuators`: control valves and dosing pumps.
 - `src/hydrasim/sensors`: sensor models and suite factory.
-- `src/hydrasim/modbus`: register map, encoding, and Modbus TCP server.
+- `src/hydrasim/modbus`: legacy scenario/register tooling used by existing
+  Python test surfaces.
 - `src/hydrasim/maintenance`: remote recalibration and hardware replacement actions.
 - `src/hydrasim/scenarios`: deterministic Modbus scenario library and runner.
 - `src/hydrasim/plant`: staged Reference Water Plant profiles, artifacts, and CLI.
 - `src/hydrasim/hydraulics`: bounded CFD/digital-twin primitives.
 - `hmi`: SvelteKit simulation HMI with static-build output and no direct
-  browser-side Modbus control.
+  browser-side process, PCS, or Modbus control.
+- `runtime`: Rust HTTP, PCS, Modbus, and Python-worker runtime.
 
 ## Quality Standard
 
 HydraSim CI installs `.[dev,modbus]` and enforces the same gate intended for
-local development. HMI CI installs from `hmi/package-lock.json` and enforces the
-frontend gate separately.
+local development. HMI CI installs from `hmi/package-lock.json`, and Rust CI
+uses the root Cargo workspace lockfile.
 
 - Black formatting on `src`, `tests`, and `tools`.
 - Ruff linting on `src`, `tests`, and `tools`.
@@ -228,15 +281,18 @@ frontend gate separately.
 - Syntax compilation checks through `compileall`.
 - Project quality policy checks, including public README coverage, deterministic
   artifact checks, Modbus dependency checks, folder density, and the hard
-  500-line limit for Python, Svelte, TypeScript, JavaScript, and CSS code files.
+  500-line limit for Python, Rust, Svelte, TypeScript, JavaScript, and CSS code
+  files.
 - Coverage-enforced unit and live Modbus end-to-end test discovery, with
   per-Python-version XML artifacts uploaded by CI.
 - HMI dependency audit, ESLint, Prettier, Svelte type checking, Vitest unit
   tests, and production SvelteKit build.
+- Rust runtime formatting, locked dependency check, unit tests, and clippy with
+  warnings denied.
 
 The quality gate has no oversized-module allowlist. If a Python file grows past
-500 lines, or an HMI code file grows past 500 lines, CI fails and the code
-should be split before merging.
+500 lines, or an HMI/runtime code file grows past 500 lines, CI fails and the
+code should be split before merging.
 
 ## Contributing And Releases
 

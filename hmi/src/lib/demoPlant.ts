@@ -1,6 +1,8 @@
 import { clamp, statusForSignal, worstStatus } from './processMath';
 import type {
   AlarmEvent,
+  BinaryCommand,
+  BinaryValues,
   CommandValues,
   HmiSnapshot,
   OperatorCommand,
@@ -70,34 +72,65 @@ const SCENARIOS: readonly ScenarioProfile[] = [
 
 const COMMANDS: readonly OperatorCommand[] = [
   {
-    id: 'chlorine-dose',
-    label: 'Chlorine Dose',
-    target: 'PMP-CL-001',
-    valueLabel: 'Dose command',
+    id: 'acid-flow',
+    label: 'Acid Flow',
+    target: 'HR 40001',
+    valueLabel: 'Setpoint',
     min: 0,
-    max: 100,
-    step: 1,
-    unit: '%',
+    max: 2,
+    step: 0.01,
+    unit: 'L/min',
   },
   {
-    id: 'clearwell-valve',
-    label: 'Clearwell Outlet',
-    target: 'FCV-CW-001',
-    valueLabel: 'Valve position',
+    id: 'chlorine-flow',
+    label: 'Chlorine Flow',
+    target: 'HR 40003',
+    valueLabel: 'Setpoint',
     min: 0,
-    max: 100,
-    step: 1,
-    unit: '%',
+    max: 1,
+    step: 0.01,
+    unit: 'L/min',
   },
   {
-    id: 'plant-flow',
-    label: 'Plant Flow',
-    target: 'FIC-INT-001',
+    id: 'inlet-flow',
+    label: 'Inlet Flow',
+    target: 'HR 40005',
     valueLabel: 'Flow setpoint',
-    min: 2.5,
-    max: 6.5,
+    min: 0,
+    max: 20,
     step: 0.1,
-    unit: 'MGD',
+    unit: 'L/min',
+  },
+  {
+    id: 'chlorine-concentration',
+    label: 'Chlorine Stock',
+    target: 'HR 40013',
+    valueLabel: 'Concentration',
+    min: 0,
+    max: 200,
+    step: 1,
+    unit: 'mg/L',
+  },
+];
+
+const BINARY_COMMANDS: readonly BinaryCommand[] = [
+  {
+    id: 'acid-pump-enable',
+    label: 'Acid Pump',
+    target: 'Coil 00001',
+    valueLabel: 'Enable',
+  },
+  {
+    id: 'chlorine-pump-enable',
+    label: 'Chlorine Pump',
+    target: 'Coil 00002',
+    valueLabel: 'Enable',
+  },
+  {
+    id: 'simulation-running',
+    label: 'Simulation Running',
+    target: 'Coil 00003',
+    valueLabel: 'Run state',
   },
 ];
 
@@ -107,9 +140,18 @@ export const scenarioCatalog: readonly ScenarioOption[] = SCENARIOS.map(
 
 export function commandDefaults(): CommandValues {
   return {
-    'chlorine-dose': 62,
-    'clearwell-valve': 74,
-    'plant-flow': 4.2,
+    'acid-flow': 0.0,
+    'chlorine-flow': 0.2,
+    'inlet-flow': 5.0,
+    'chlorine-concentration': 60.0,
+  };
+}
+
+export function binaryDefaults(): BinaryValues {
+  return {
+    'acid-pump-enable': true,
+    'chlorine-pump-enable': true,
+    'simulation-running': true,
   };
 }
 
@@ -121,24 +163,20 @@ export function buildSnapshot(
   const profile = SCENARIOS.find((item) => item.id === scenarioId) ?? SCENARIOS[0];
   const wave = Math.sin(elapsedSeconds / 9);
   const slowWave = Math.sin(elapsedSeconds / 24);
-  const dose = clamp(commands['chlorine-dose'] ?? 62, 0, 100);
-  const valve = clamp(commands['clearwell-valve'] ?? 74, 0, 100);
-  const flowSetpoint = clamp(commands['plant-flow'] ?? 4.2, 2.5, 6.5);
+  const acidFlow = clamp(commands['acid-flow'] ?? 0, 0, 2);
+  const chlorineFlow = clamp(commands['chlorine-flow'] ?? 0.2, 0, 1);
+  const flowSetpoint = clamp(commands['inlet-flow'] ?? 5, 0, 20);
 
-  const flow = flowSetpoint + profile.flowOffset + (valve - 74) * 0.014 + wave * 0.05;
-  const chlorine = 1.38 + profile.chlorineOffset + (dose - 62) * 0.015 - flow * 0.035;
-  const ph = 7.32 + profile.phOffset + slowWave * 0.03 - (dose - 62) * 0.002;
-  const turbidity = 0.18 + profile.turbidityOffset + Math.max(flow - 4.6, 0) * 0.08;
-  const tankLevel = clamp(
-    72 + (valve - 74) * -0.18 + profile.flowOffset * 6 + slowWave * 2,
-    35,
-    96,
-  );
+  const flow = flowSetpoint + profile.flowOffset + wave * 0.05;
+  const chlorine = 1.38 + profile.chlorineOffset + chlorineFlow * 0.45 - flow * 0.035;
+  const ph = 7.32 + profile.phOffset + slowWave * 0.03 - acidFlow * 0.08;
+  const turbidity = 0.18 + profile.turbidityOffset + Math.max(flow - 8, 0) * 0.02;
+  const tankLevel = clamp(72 + profile.flowOffset * 6 + slowWave * 2, 35, 96);
 
   const signals: readonly ProcessSignal[] = [
-    signal('FIT-INT-001', 'Influent Flow', flow, 'MGD', 2, 3.1, 5.8, 2.6, 6.2),
-    signal('AIT-PH-001', 'pH', ph, 'pH', 2, 6.8, 7.8, 6.5, 8.2),
-    signal('AIT-CL-001', 'Chlorine Residual', chlorine, 'mg/L', 2, 0.9, 2.2, 0.6, 2.8),
+    signal('FIT-INT-001', 'Influent Flow', flow, 'L/min', 2, 1, 18, 0.1, 20),
+    signal('AIT-PH-001', 'Outlet pH', ph, 'pH', 2, 6.8, 7.8, 6.5, 8.2),
+    signal('AIT-CL-001', 'Outlet Chlorine', chlorine, 'mg/L', 2, 0.9, 2.2, 0.6, 2.8),
     signal('AIT-TU-001', 'Filter Turbidity', turbidity, 'NTU', 2, undefined, 0.5, undefined, 0.9),
     signal('LIT-CW-001', 'Clearwell Level', tankLevel, '%', 0, 45, 92, 35, 97),
   ];
@@ -148,6 +186,7 @@ export function buildSnapshot(
   const alarms = buildAlarms(profile, signals, status);
 
   return {
+    source: 'demo',
     connection: profile.connection,
     elapsedSeconds,
     mode: 'Simulation HMI',
@@ -156,7 +195,10 @@ export function buildSnapshot(
     areas,
     alarms,
     commands: COMMANDS,
-    trends: buildTrends(profile, elapsedSeconds, flowSetpoint, dose),
+    commandValues: { ...commands },
+    binaryCommands: BINARY_COMMANDS,
+    binaryValues: binaryDefaults(),
+    trends: buildTrends(profile, elapsedSeconds, flowSetpoint, chlorineFlow),
   };
 }
 
@@ -214,13 +256,23 @@ function area(
   id: string,
   name: string,
   status: SignalStatus,
-  flowMgd: number,
+  flowRate: number,
   tankLevelPercent: number,
   residualMgL: number,
   turbidityNtu: number,
   controllerMode: ProcessArea['controllerMode'],
 ): ProcessArea {
-  return { id, name, status, flowMgd, tankLevelPercent, residualMgL, turbidityNtu, controllerMode };
+  return {
+    id,
+    name,
+    status,
+    flowRate,
+    flowUnit: 'L/min',
+    tankLevelPercent,
+    residualMgL,
+    turbidityNtu,
+    controllerMode,
+  };
 }
 
 function buildAlarms(
@@ -252,7 +304,7 @@ function buildTrends(
   profile: ScenarioProfile,
   elapsedSeconds: number,
   flowSetpoint: number,
-  dose: number,
+  chlorineFlow: number,
 ): readonly TrendPoint[] {
   return Array.from({ length: 28 }, (_, index) => {
     const minute = index - 27;
@@ -260,7 +312,7 @@ function buildTrends(
     return {
       minute,
       ph: 7.32 + profile.phOffset + Math.sin(phase / 2) * 0.04,
-      chlorine: 1.38 + profile.chlorineOffset + (dose - 62) * 0.012 + Math.sin(phase) * 0.08,
+      chlorine: 1.38 + profile.chlorineOffset + chlorineFlow * 0.3 + Math.sin(phase) * 0.08,
       flow: flowSetpoint + profile.flowOffset + Math.cos(phase / 1.8) * 0.08,
       turbidity: 0.18 + profile.turbidityOffset + Math.max(Math.sin(phase / 3), 0) * 0.06,
     };

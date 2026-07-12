@@ -11,7 +11,7 @@
     commands: readonly OperatorCommand[];
     values: CommandValues;
     onReset: () => void;
-    onUpdate: (id: string, value: number) => void;
+    onUpdate: (id: string, value: number) => void | Promise<void>;
   } = $props();
 
   function valueFor(command: OperatorCommand): number {
@@ -55,7 +55,9 @@
     gap: 1rem;
     padding: 1rem;
     border: 1px solid var(--border);
+    border-radius: var(--radius);
     background: var(--surface);
+    box-shadow: var(--shadow);
   }
 
   .controls__heading {
@@ -79,19 +81,22 @@
 
   h2 {
     font-size: 1rem;
+    color: var(--text-strong);
   }
 
   button {
     padding: 0.5rem 0.7rem;
-    border: 1px solid var(--border-strong);
-    background: var(--surface-strong);
-    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--surface-tinted);
+    color: var(--accent-strong);
     font: inherit;
+    font-weight: 800;
     cursor: pointer;
   }
 
   button:hover {
-    border-color: var(--accent);
+    background: #dff0ee;
   }
 
   .controls__list,
@@ -103,7 +108,7 @@
   .control {
     grid-template-columns: minmax(10rem, 1fr) minmax(10rem, 1.4fr) 5rem;
     align-items: center;
-    padding-top: 0.85rem;
+    padding: 0.75rem 0;
     border-top: 1px solid var(--border);
   }
 
@@ -116,13 +121,41 @@
     color: var(--muted);
   }
 
-  input {
+  input[type='range'] {
     width: 100%;
+    height: 0.45rem;
+    border-radius: 999px;
+    appearance: none;
     accent-color: var(--accent);
+    background: linear-gradient(90deg, var(--accent), var(--surface-strong));
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid #ffffff;
+    border-radius: 999px;
+    appearance: none;
+    background: var(--accent-strong);
+    box-shadow: 0 2px 8px rgba(8, 127, 140, 0.28);
+  }
+
+  input[type='range']::-moz-range-thumb {
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 2px solid #ffffff;
+    border-radius: 999px;
+    background: var(--accent-strong);
+    box-shadow: 0 2px 8px rgba(8, 127, 140, 0.28);
   }
 
   output {
     justify-self: end;
+    padding: 0.22rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-strong);
+    color: var(--text-strong);
     font-weight: 700;
   }
 

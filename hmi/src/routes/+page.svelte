@@ -6,34 +6,88 @@
   import ProcessAreaGrid from '$lib/components/ProcessAreaGrid.svelte';
   import ScenarioPanel from '$lib/components/ScenarioPanel.svelte';
   import SystemStatus from '$lib/components/SystemStatus.svelte';
+  import TogglePanel from '$lib/components/TogglePanel.svelte';
   import TrendChart from '$lib/components/TrendChart.svelte';
-  import { buildSnapshot, commandDefaults, scenarioCatalog } from '$lib/demoPlant';
-  import type { CommandValues, ScenarioId } from '$lib/types';
+  import { fetchSnapshot, writeCoil, writeCommand } from '$lib/api';
+  import { binaryDefaults, buildSnapshot, commandDefaults, scenarioCatalog } from '$lib/demoPlant';
+  import type { BinaryValues, CommandValues, HmiSnapshot, ScenarioId } from '$lib/types';
 
   let elapsedSeconds = $state(0);
   let selectedScenario = $state<ScenarioId>('steady-state');
   let commandValues = $state<CommandValues>(commandDefaults());
-  const snapshot = $derived(buildSnapshot(selectedScenario, elapsedSeconds, commandValues));
+  let binaryValues = $state<BinaryValues>(binaryDefaults());
+  let liveSnapshot = $state<HmiSnapshot | null>(null);
+  let lastError = $state<string | null>(null);
+
+  const fallbackSnapshot = $derived(buildSnapshot(selectedScenario, elapsedSeconds, commandValues));
+  const snapshot = $derived(
+    liveSnapshot ?? { ...fallbackSnapshot, lastError: lastError ?? undefined },
+  );
+  const activeCommandValues = $derived(liveSnapshot?.commandValues ?? commandValues);
+  const activeBinaryValues = $derived(liveSnapshot?.binaryValues ?? binaryValues);
 
   onMount(() => {
-    const timer = window.setInterval(() => {
+    void refreshSnapshot();
+
+    const demoTimer = window.setInterval(() => {
       elapsedSeconds += 1;
     }, 1000);
 
-    return () => window.clearInterval(timer);
+    const runtimeTimer = window.setInterval(() => {
+      void refreshSnapshot();
+    }, 1000);
+
+    return () => {
+      window.clearInterval(demoTimer);
+      window.clearInterval(runtimeTimer);
+    };
   });
+
+  async function refreshSnapshot(): Promise<void> {
+    try {
+      const next = await fetchSnapshot();
+      liveSnapshot = next;
+      commandValues = next.commandValues;
+      binaryValues = next.binaryValues;
+      lastError = null;
+    } catch (error) {
+      liveSnapshot = null;
+      lastError = error instanceof Error ? error.message : 'Rust runtime unavailable';
+    }
+  }
 
   function selectScenario(scenario: ScenarioId): void {
     selectedScenario = scenario;
     elapsedSeconds = 0;
   }
 
-  function updateCommand(id: string, value: number): void {
-    commandValues = { ...commandValues, [id]: value };
+  async function updateCommand(id: string, value: number): Promise<void> {
+    commandValues = { ...activeCommandValues, [id]: value };
+    if (liveSnapshot) {
+      try {
+        await writeCommand(id, value);
+        await refreshSnapshot();
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'command write failed';
+      }
+    }
+  }
+
+  async function updateCoil(id: string, enabled: boolean): Promise<void> {
+    binaryValues = { ...activeBinaryValues, [id]: enabled };
+    if (liveSnapshot) {
+      try {
+        await writeCoil(id, enabled);
+        await refreshSnapshot();
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'coil write failed';
+      }
+    }
   }
 
   function resetCommands(): void {
     commandValues = commandDefaults();
+    binaryValues = binaryDefaults();
   }
 </script>
 
@@ -54,11 +108,19 @@
         <h1>Water Treatment Simulation Console</h1>
       </div>
     </div>
-    <span class="simulation-label">Simulation Only · No Direct Modbus Control</span>
+    <div class="topbar__meta" aria-label="Runtime status">
+      <span class={`runtime-badge runtime-badge--${snapshot.connection}`}>
+        {snapshot.connection}
+      </span>
+      <span class="simulation-label">Simulation Only · {snapshot.source}</span>
+    </div>
   </header>
 
   <main class="dashboard">
     <SystemStatus {snapshot} />
+    {#if snapshot.lastError}
+      <p class="backend-error">Runtime fallback: {snapshot.lastError}</p>
+    {/if}
     <AlarmStrip alarms={snapshot.alarms} />
 
     <section class="kpi-grid" aria-label="Process values">
@@ -81,9 +143,14 @@
         />
         <ControlPanel
           commands={snapshot.commands}
-          values={commandValues}
+          values={activeCommandValues}
           onReset={resetCommands}
           onUpdate={updateCommand}
+        />
+        <TogglePanel
+          commands={snapshot.binaryCommands}
+          values={activeBinaryValues}
+          onUpdate={updateCoil}
         />
       </aside>
     </div>

@@ -27,6 +27,11 @@ HydraSim follows semantic versioning intent:
   bounded operator setpoints, npm lockfile, and frontend unit tests.
 - HMI CI gate for npm audit, ESLint, Prettier, Svelte type checking, Vitest, and
   static production builds.
+- Rust runtime that exposes HTTP endpoints for snapshots, bounded setpoint
+  writes, coil writes, PCS interlocks, a Rust-owned Modbus TCP server, and a
+  stdio Python simulation-worker boundary.
+- Rust CI gate for formatting, locked dependency checks, tests, and clippy with
+  warnings denied.
 
 ### Changed
 
@@ -39,8 +44,9 @@ HydraSim follows semantic versioning intent:
 - Expanded CI from a partial project check to the full local quality gate,
   including package coverage and distribution-build readiness.
 - Expanded the 500-line quality policy from Python-only checks to Python,
-  Svelte, TypeScript, JavaScript, and CSS code files.
-- Documented the browser/runtime boundary for the simulation-only HMI.
+  Rust, Svelte, TypeScript, JavaScript, and CSS code files.
+- Documented and enforced the Svelte/Rust/Python separation of concerns for the
+  simulation-only HMI.
 
 ### Removed
 

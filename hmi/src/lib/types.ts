@@ -1,6 +1,8 @@
 export type AlarmSeverity = 'notice' | 'warning' | 'critical';
 export type ConnectionState = 'connected' | 'degraded' | 'offline';
-export type ScenarioId = 'steady-state' | 'chlorine-upset' | 'filter-backwash' | 'loss-of-feed';
+export type HmiSource = 'demo' | 'runtime';
+export type ScenarioId =
+  'steady-state' | 'chlorine-upset' | 'filter-backwash' | 'loss-of-feed' | 'live-runtime';
 export type SignalStatus = 'normal' | 'warning' | 'alarm';
 
 export interface ProcessSignal {
@@ -20,7 +22,8 @@ export interface ProcessArea {
   id: string;
   name: string;
   status: SignalStatus;
-  flowMgd: number;
+  flowRate: number;
+  flowUnit: string;
   tankLevelPercent: number;
   residualMgL: number;
   turbidityNtu: number;
@@ -48,6 +51,15 @@ export interface OperatorCommand {
 
 export type CommandValues = Record<string, number>;
 
+export interface BinaryCommand {
+  id: string;
+  label: string;
+  target: string;
+  valueLabel: string;
+}
+
+export type BinaryValues = Record<string, boolean>;
+
 export interface TrendPoint {
   minute: number;
   ph: number;
@@ -63,6 +75,7 @@ export interface ScenarioOption {
 }
 
 export interface HmiSnapshot {
+  source: HmiSource;
   connection: ConnectionState;
   elapsedSeconds: number;
   mode: string;
@@ -71,5 +84,9 @@ export interface HmiSnapshot {
   areas: readonly ProcessArea[];
   alarms: readonly AlarmEvent[];
   commands: readonly OperatorCommand[];
+  commandValues: CommandValues;
+  binaryCommands: readonly BinaryCommand[];
+  binaryValues: BinaryValues;
   trends: readonly TrendPoint[];
+  lastError?: string;
 }

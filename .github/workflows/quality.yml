@@ -106,3 +106,30 @@ jobs:
       - name: Build HMI
         working-directory: hmi
         run: npm run build
+
+  rust-runtime-quality:
+    name: Rust Runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Rust
+        run: rustup toolchain install stable --profile minimal --component clippy,rustfmt
+
+      - name: Format Rust runtime
+        working-directory: runtime
+        run: cargo fmt --check
+
+      - name: Check Rust runtime
+        working-directory: runtime
+        run: cargo check --locked
+
+      - name: Test Rust runtime
+        working-directory: runtime
+        run: cargo test --locked
+
+      - name: Lint Rust runtime
+        working-directory: runtime
+        run: cargo clippy --locked --all-targets -- -D warnings

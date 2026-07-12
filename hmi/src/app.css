@@ -8,20 +8,31 @@
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
-  color: #17212b;
-  background: #eef2f4;
-  --text: #17212b;
-  --muted: #60707c;
+  color: #16211f;
+  background: #e8eeeb;
+  --text: #16211f;
+  --text-strong: #091211;
+  --muted: #65736f;
+  --muted-strong: #40514c;
+  --background: #e8eeeb;
   --surface: #ffffff;
-  --surface-strong: #f6f8f9;
-  --border: #d8e0e5;
-  --border-strong: #aebdc8;
-  --accent: #087f9b;
-  --ok: #1d9a64;
-  --ok-text: #0f7046;
-  --warn: #d19100;
-  --warn-text: #946500;
-  --danger: #c6342b;
+  --surface-strong: #f5f8f7;
+  --surface-tinted: #edf6f5;
+  --header: #10211f;
+  --border: #d5dfdb;
+  --border-strong: #9fb1aa;
+  --accent: #087f8c;
+  --accent-strong: #075f69;
+  --ok: #15845a;
+  --ok-bg: #e6f6ee;
+  --ok-text: #0e6643;
+  --warn: #c98500;
+  --warn-bg: #fff3d2;
+  --warn-text: #7b5200;
+  --danger: #c63b35;
+  --danger-bg: #fdecea;
+  --radius: 8px;
+  --shadow: 0 14px 34px rgba(17, 35, 31, 0.08);
 }
 
 * {
@@ -31,6 +42,10 @@
 body {
   min-width: 320px;
   margin: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.56) 0, rgba(255, 255, 255, 0) 22rem),
+    var(--background);
+  color: var(--text);
 }
 
 button,
@@ -55,9 +70,11 @@ input:focus-visible {
   gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--header);
+  color: #f4fbf9;
+  box-shadow: 0 1px 0 rgba(12, 25, 23, 0.3);
 }
 
 .brand {
@@ -71,9 +88,11 @@ input:focus-visible {
   width: 2.5rem;
   height: 2.5rem;
   place-items: center;
-  background: var(--accent);
-  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #f2c94c;
+  color: #12211e;
   font-weight: 800;
+  border-radius: 6px;
 }
 
 .brand p,
@@ -82,7 +101,7 @@ input:focus-visible {
 }
 
 .brand p {
-  color: var(--muted);
+  color: #a7b8b4;
   font-size: 0.78rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -90,23 +109,78 @@ input:focus-visible {
 
 .brand h1 {
   font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
+.topbar__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.runtime-badge,
+.simulation-label {
+  display: inline-flex;
+  min-height: 2.1rem;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.runtime-badge {
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7fbfa;
+  text-transform: capitalize;
+}
+
+.runtime-badge::before {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  content: '';
+  background: var(--ok);
+  box-shadow: 0 0 0 4px rgba(21, 132, 90, 0.18);
+}
+
+.runtime-badge--degraded::before {
+  background: var(--warn);
+  box-shadow: 0 0 0 4px rgba(201, 133, 0, 0.2);
+}
+
+.runtime-badge--offline::before {
+  background: var(--danger);
+  box-shadow: 0 0 0 4px rgba(198, 59, 53, 0.18);
 }
 
 .simulation-label {
-  padding: 0.5rem 0.7rem;
-  border: 1px solid #f0c15b;
-  background: #fff8e5;
-  color: #6d4a00;
-  font-size: 0.88rem;
-  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(242, 201, 76, 0.42);
+  background: rgba(242, 201, 76, 0.13);
+  color: #ffe7a3;
 }
 
 .dashboard {
   display: grid;
-  width: min(100%, 1500px);
+  width: min(100%, 1540px);
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.1rem;
   gap: 1rem;
+}
+
+.backend-error {
+  margin: 0;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid #e2b44f;
+  border-radius: var(--radius);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-weight: 700;
 }
 
 .kpi-grid {
@@ -117,7 +191,7 @@ input:focus-visible {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+  grid-template-columns: minmax(0, 1fr) minmax(21rem, 28rem);
   gap: 1rem;
   align-items: start;
 }
@@ -142,6 +216,10 @@ input:focus-visible {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .topbar__meta {
+    justify-content: flex-start;
   }
 
   .kpi-grid {

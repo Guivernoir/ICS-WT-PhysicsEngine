@@ -24,6 +24,7 @@ CODE_FILE_SUFFIXES = {
     ".cjs",
     ".py",
     ".pyi",
+    ".rs",
     ".svelte",
     ".ts",
     ".tsx",
@@ -41,6 +42,7 @@ SKIP_DIRS = {
     "coverage",
     "dist",
     "node_modules",
+    "target",
     "venv",
 }
 LOCAL_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
